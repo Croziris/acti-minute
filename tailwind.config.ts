@@ -19,6 +19,27 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        
+        /* Couleurs principales du design system */
+        navy: "hsl(var(--navy))",
+        royal: "hsl(var(--royal))",
+        "royal-light": "hsl(var(--royal-light))",
+        "royal-dark": "hsl(var(--royal-dark))",
+        
+        /* Échelle de gris */
+        grey: {
+          50: "hsl(var(--grey-50))",
+          100: "hsl(var(--grey-100))",
+          200: "hsl(var(--grey-200))",
+          300: "hsl(var(--grey-300))",
+          400: "hsl(var(--grey-400))",
+          500: "hsl(var(--grey-500))",
+          600: "hsl(var(--grey-600))",
+          700: "hsl(var(--grey-700))",
+          800: "hsl(var(--grey-800))",
+          900: "hsl(var(--grey-900))",
+        },
+        
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -47,6 +68,22 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        
+        /* Navigation & status colors */
+        nav: {
+          DEFAULT: "hsl(var(--nav-background))",
+          foreground: "hsl(var(--nav-foreground))",
+          active: "hsl(var(--nav-active))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -57,6 +94,17 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      backgroundImage: {
+        "gradient-primary": "var(--gradient-primary)",
+        "gradient-hero": "var(--gradient-hero)",
+        "gradient-card": "var(--gradient-card)",
+      },
+      boxShadow: {
+        sm: "var(--shadow-sm)",
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-lg)",
+        xl: "var(--shadow-xl)",
       },
       borderRadius: {
         lg: "var(--radius)",

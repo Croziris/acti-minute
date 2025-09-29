@@ -1,0 +1,85 @@
+import React from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { LayoutDashboard, Users, Settings, LogOut, Dumbbell } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+
+interface CoachLayoutProps {
+  children: React.ReactNode;
+}
+
+export const CoachLayout: React.FC<CoachLayoutProps> = ({ children }) => {
+  const { user, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/auth');
+  };
+
+  const isActive = (path: string) => {
+    return location.pathname === path || location.pathname.startsWith(path);
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar desktop */}
+      <aside className="w-64 bg-nav text-nav-foreground flex flex-col">
+        <div className="p-6">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-white/10 rounded-lg">
+              <Dumbbell className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="font-bold text-lg">FitCoachSync</h1>
+              <p className="text-sm opacity-75">Coach {user?.handle || 'Pro'}</p>
+            </div>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-4 pb-4">
+          <div className="space-y-2">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/coach/dashboard')}
+              className={`w-full justify-start text-nav-foreground hover:bg-white/10 ${
+                isActive('/coach/dashboard') ? 'bg-nav-active text-white' : ''
+              }`}
+            >
+              <LayoutDashboard className="h-5 w-5 mr-3" />
+              Dashboard
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/coach/clients')}
+              className={`w-full justify-start text-nav-foreground hover:bg-white/10 ${
+                isActive('/coach/client') ? 'bg-nav-active text-white' : ''
+              }`}
+            >
+              <Users className="h-5 w-5 mr-3" />
+              Mes Clients
+            </Button>
+          </div>
+        </nav>
+
+        <div className="p-4 border-t border-white/10">
+          <Button
+            variant="ghost"
+            onClick={handleLogout}
+            className="w-full justify-start text-nav-foreground hover:bg-white/10"
+          >
+            <LogOut className="h-5 w-5 mr-3" />
+            Déconnexion
+          </Button>
+        </div>
+      </aside>
+
+      {/* Contenu principal */}
+      <main className="flex-1 p-8">
+        {children}
+      </main>
+    </div>
+  );
+};

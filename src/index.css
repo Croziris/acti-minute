@@ -2,57 +2,92 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Design system pour l'app de coaching sportif FitCoachSync
+Palette : Navy (navigation) / Royal Blue (primaire) / Gris clair (cartes)
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Couleurs principales */
+    --navy: 220 40% 15%;
+    --royal: 220 90% 50%;
+    --royal-light: 220 85% 60%;
+    --royal-dark: 220 95% 40%;
+    
+    /* Greys */
+    --grey-50: 220 20% 98%;
+    --grey-100: 220 15% 95%;
+    --grey-200: 220 10% 90%;
+    --grey-300: 220 8% 80%;
+    --grey-400: 220 6% 65%;
+    --grey-500: 220 5% 50%;
+    --grey-600: 220 6% 35%;
+    --grey-700: 220 8% 25%;
+    --grey-800: 220 10% 15%;
+    --grey-900: 220 15% 10%;
+
+    /* Semantic colors */
+    --background: var(--grey-50);
+    --foreground: var(--grey-900);
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: var(--grey-900);
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: var(--grey-900);
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: var(--royal);
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: var(--grey-100);
+    --secondary-foreground: var(--grey-800);
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: var(--grey-100);
+    --muted-foreground: var(--grey-500);
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: var(--royal-light);
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: var(--grey-200);
+    --input: var(--grey-200);
+    --ring: var(--royal);
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* Navigation colors */
+    --nav-background: var(--navy);
+    --nav-foreground: 0 0% 100%;
+    --nav-active: var(--royal);
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    /* Success & warning colors */
+    --success: 140 70% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 40 90% 50%;
+    --warning-foreground: 0 0% 100%;
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--royal)), hsl(var(--royal-light)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--navy)), hsl(var(--royal-dark)));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(var(--grey-50)));
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(var(--grey-900) / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(var(--grey-900) / 0.1), 0 2px 4px -1px hsl(var(--grey-900) / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(var(--grey-900) / 0.1), 0 4px 6px -2px hsl(var(--grey-900) / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(var(--grey-900) / 0.1), 0 10px 10px -5px hsl(var(--grey-900) / 0.04);
 
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Sidebar (utilisé pour navigation mobile) */
+    --sidebar-background: var(--nav-background);
+    --sidebar-foreground: var(--nav-foreground);
+    --sidebar-primary: var(--royal);
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: hsl(var(--royal) / 0.1);
+    --sidebar-accent-foreground: var(--nav-foreground);
+    --sidebar-border: hsl(var(--grey-700));
+    --sidebar-ring: var(--royal);
   }
 
   .dark {
