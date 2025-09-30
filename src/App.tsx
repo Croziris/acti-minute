@@ -12,6 +12,7 @@ import ClientHabits from "@/pages/client/ClientHabits";
 import ClientArticles from "@/pages/client/ClientArticles";
 import ClientArticle from "@/pages/client/ClientArticle";
 import CoachDashboard from "@/pages/coach/CoachDashboard";
+import CoachClients from "@/pages/coach/CoachClients";
 import CoachClient from "@/pages/coach/CoachClient";
 import CoachBuilder from "@/pages/coach/CoachBuilder";
 import NotFound from "@/pages/NotFound";
@@ -60,6 +61,11 @@ const App = () => (
             <Route path="/coach/dashboard" element={
               <ProtectedRoute allowedRoles={["coach"]}>
                 <CoachDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/coach/clients" element={
+              <ProtectedRoute allowedRoles={["coach"]}>
+                <CoachClients />
               </ProtectedRoute>
             } />
             <Route path="/coach/client/:id" element={
