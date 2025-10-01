@@ -133,43 +133,33 @@ export const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
     if (!newExercise.libelle || !user) return;
 
     try {
-      let videoId = null;
-      
-      if (newExercise.youtube_url) {
-        videoId = extractYouTubeVideoId(newExercise.youtube_url);
-        if (!videoId) {
-          toast({
-            title: "URL YouTube invalide",
-            description: "Veuillez saisir une URL YouTube valide",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      const exerciseData = {
-        libelle: newExercise.libelle,
-        description: newExercise.description || null,
-        categories: newExercise.categories,
-        groupes: newExercise.groupes,
-        niveau: newExercise.niveau || null,
-        materiel: newExercise.materiel,
-        video_provider: 'youtube',
-        video_id: videoId,
-        youtube_url: newExercise.youtube_url || null,
-        created_by: user.id,
-        verified: user.role === 'coach'
-      };
-
-      const { data, error } = await supabase
-        .from('exercise')
-        .insert(exerciseData)
-        .select()
-        .single();
+      const { data, error } = await supabase.functions.invoke('create-exercise', {
+        body: {
+          libelle: newExercise.libelle,
+          description: newExercise.description,
+          youtube_url: newExercise.youtube_url,
+          categories: newExercise.categories,
+          groupes: newExercise.groupes,
+          niveau: newExercise.niveau,
+          materiel: newExercise.materiel,
+        },
+      });
 
       if (error) throw error;
 
-      setExercises(prev => [data, ...prev]);
+      if (data?.error) {
+        toast({
+          title: "Erreur",
+          description: data.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.exercise) {
+        setExercises(prev => [data.exercise, ...prev]);
+      }
+
       setShowAddDialog(false);
       setNewExercise({
         libelle: '',

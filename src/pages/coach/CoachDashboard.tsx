@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CoachLayout } from '@/components/layout/CoachLayout';
 import { useCoachClients } from '@/hooks/useCoachClients';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Dumbbell, Calendar, TrendingUp } from 'lucide-react';
+import { AssignClientDialog } from '@/components/coach/AssignClientDialog';
+import { Users, Dumbbell, Calendar, TrendingUp, UserPlus } from 'lucide-react';
 
 const CoachDashboard = () => {
-  const { clients, loading } = useCoachClients();
+  const { clients, loading, refetch } = useCoachClients();
   const navigate = useNavigate();
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
 
   return (
     <CoachLayout>
@@ -79,7 +81,7 @@ const CoachDashboard = () => {
             <CardTitle>Actions rapides</CardTitle>
             <CardDescription>Accédez rapidement aux fonctionnalités principales</CardDescription>
           </CardHeader>
-          <CardContent className="flex gap-4">
+          <CardContent className="flex flex-wrap gap-4">
             <Button onClick={() => navigate('/coach/clients')}>
               <Users className="mr-2 h-4 w-4" />
               Voir mes clients
@@ -88,8 +90,20 @@ const CoachDashboard = () => {
               <Dumbbell className="mr-2 h-4 w-4" />
               Créer une séance
             </Button>
+            <Button variant="outline" onClick={() => setShowAssignDialog(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Assigner un·e sportif·ve
+            </Button>
           </CardContent>
         </Card>
+
+        <AssignClientDialog
+          open={showAssignDialog}
+          onOpenChange={setShowAssignDialog}
+          onSuccess={() => {
+            refetch();
+          }}
+        />
       </div>
     </CoachLayout>
   );
