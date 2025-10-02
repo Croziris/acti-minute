@@ -96,13 +96,21 @@ serve(async (req) => {
     const email = `${username}@app.local`;
     console.log(`🔐 Checking auth user: ${email}`);
 
-    // Vérifier si l'utilisateur existe déjà
+    // Vérifier si l'utilisateur existe déjà (insensible à la casse)
     const { data: existingUsers } = await supabase.auth.admin.listUsers();
-    let authUserId = existingUsers?.users.find(u => u.email === email)?.id;
+    console.log(`📋 Total users in auth: ${existingUsers?.users.length || 0}`);
+    
+    const existingAuthUser = existingUsers?.users.find(
+      u => u.email?.toLowerCase() === email.toLowerCase()
+    );
 
-    if (!authUserId) {
+    let authUserId: string;
+
+    if (existingAuthUser) {
+      console.log(`✅ Auth user already exists: ${existingAuthUser.id}`);
+      authUserId = existingAuthUser.id;
+    } else {
       console.log('🆕 Creating new auth user...');
-      // Créer l'utilisateur Auth Supabase avec l'ID de app_user
       const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
         email,
         password: access_key,
@@ -116,15 +124,39 @@ serve(async (req) => {
 
       if (createError) {
         console.error('❌ Error creating auth user:', createError);
-        return new Response(
-          JSON.stringify({ error: 'Could not create auth session' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        
+        // Si l'erreur est que l'utilisateur existe déjà, essayer de le retrouver
+        if (createError.message?.includes('already been registered')) {
+          console.log('⚠️ User exists but was not found in listUsers, searching again...');
+          const { data: retryUsers } = await supabase.auth.admin.listUsers();
+          const foundUser = retryUsers?.users.find(
+            u => u.email?.toLowerCase() === email.toLowerCase()
+          );
+          
+          if (foundUser) {
+            console.log(`✅ Found existing user on retry: ${foundUser.id}`);
+            authUserId = foundUser.id;
+          } else {
+            console.error('❌ Could not find existing user even after retry');
+            return new Response(
+              JSON.stringify({ error: 'Authentication error', details: createError.message }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        } else {
+          return new Response(
+            JSON.stringify({ error: 'Could not create auth session', details: createError.message }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        authUserId = newUser.user.id;
+        console.log(`✅ Auth user created: ${authUserId}`);
       }
-      authUserId = newUser.user.id;
-      console.log(`✅ Auth user created: ${authUserId}`);
-      
-      // Tenter de synchroniser l'ID (peut échouer si l'utilisateur a déjà des relations)
+    }
+
+    // Synchroniser les IDs si nécessaire (sans bloquer si ça échoue)
+    if (appUser.id !== authUserId) {
       console.log(`🔄 Attempting to sync app_user id from ${appUser.id} to ${authUserId}`);
       const { error: updateError } = await supabase
         .from('app_user')
@@ -132,16 +164,13 @@ serve(async (req) => {
         .eq('credential_id', credential.id);
       
       if (updateError) {
-        console.error('⚠️ Could not sync app_user id (this is OK for existing users with data):', updateError.message);
-        // Ne pas retourner d'erreur ici - continuer avec l'ancien ID
-        authUserId = appUser.id;
+        console.error('⚠️ Could not sync app_user id:', updateError.message);
+        authUserId = appUser.id; // Utiliser l'ID existant
       } else {
         console.log('✅ App user id synchronized');
       }
     } else {
-      console.log(`✅ Auth user already exists: ${authUserId}`);
-      // Utiliser l'ID de auth.users si possible, sinon garder l'ID actuel
-      authUserId = appUser.id;
+      console.log(`✅ IDs already synchronized: ${authUserId}`);
     }
 
     console.log('✅ Function completed successfully');
