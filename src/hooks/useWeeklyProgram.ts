@@ -39,22 +39,38 @@ export const useWeeklyProgram = () => {
         const now = new Date();
         const currentISOWeek = getISOWeek(now);
         
-        // First try to get existing week plan
+        // First, get the client's program
+        const { data: programData, error: programError } = await supabase
+          .from('program')
+          .select('id')
+          .eq('client_id', user.id)
+          .maybeSingle();
+
+        if (programError) throw programError;
+
+        if (!programData) {
+          // No program found for this client
+          setWeekPlan({
+            id: '',
+            iso_week: currentISOWeek,
+            start_date: getWeekStart(now).toISOString().split('T')[0],
+            end_date: getWeekEnd(now).toISOString().split('T')[0],
+            expected_sessions: 0,
+            sessions: []
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Try to get existing week plan for this program
         const { data: weekPlanData, error: weekError } = await supabase
           .from('week_plan')
-          .select(`
-            *,
-            program:program_id (
-              client_id
-            )
-          `)
+          .select('*')
+          .eq('program_id', programData.id)
           .eq('iso_week', currentISOWeek)
-          .eq('program.client_id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (weekError && weekError.code !== 'PGRST116') {
-          throw weekError;
-        }
+        if (weekError) throw weekError;
 
         if (!weekPlanData) {
           // No week plan found, create placeholder
@@ -63,7 +79,7 @@ export const useWeeklyProgram = () => {
             iso_week: currentISOWeek,
             start_date: getWeekStart(now).toISOString().split('T')[0],
             end_date: getWeekEnd(now).toISOString().split('T')[0],
-            expected_sessions: 3,
+            expected_sessions: 0,
             sessions: []
           });
           setLoading(false);
@@ -97,6 +113,7 @@ export const useWeeklyProgram = () => {
         });
 
       } catch (err) {
+        console.error('Error fetching weekly program:', err);
         setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
       } finally {
         setLoading(false);
