@@ -24,6 +24,8 @@ serve(async (req) => {
 
     // Vérifier l'authentification
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    console.log('Auth check:', { user: user?.id, error: authError });
+    
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: 'Non authentifié' }),
@@ -37,6 +39,8 @@ serve(async (req) => {
       .select('role')
       .eq('id', user.id)
       .single();
+
+    console.log('Role check:', { appUser, roleError });
 
     if (roleError || !appUser || appUser.role !== 'coach') {
       return new Response(
