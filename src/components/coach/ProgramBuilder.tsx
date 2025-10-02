@@ -142,32 +142,31 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
     if (!selectedWorkoutId) return;
 
     try {
-      // Get the max order_index for this workout
-      const { data: existingExercises } = await supabase
-        .from('workout_exercise')
-        .select('order_index')
-        .eq('workout_id', selectedWorkoutId)
-        .order('order_index', { ascending: false })
-        .limit(1);
-
-      const nextOrderIndex = existingExercises && existingExercises.length > 0 
-        ? existingExercises[0].order_index + 1 
-        : 0;
-
-      const { error } = await supabase.from('workout_exercise').insert({
-        workout_id: selectedWorkoutId,
-        exercise_id: exercise.id,
-        order_index: nextOrderIndex,
-        series: 3,
-        reps: 10,
+      const { data, error } = await supabase.functions.invoke('add-exercise-to-workout', {
+        body: {
+          workout_id: selectedWorkoutId,
+          exercise_id: exercise.id,
+          series: 3,
+          reps: 10,
+        },
       });
 
       if (error) throw error;
+
+      if (data?.error) {
+        toast({
+          title: 'Erreur',
+          description: data.error,
+          variant: 'destructive',
+        });
+        return;
+      }
 
       toast({ title: 'Exercice ajouté à la séance' });
       setShowExerciseLibrary(false);
       fetchWorkouts();
     } catch (error) {
+      console.error('Error adding exercise to workout:', error);
       toast({
         title: 'Erreur',
         description: 'Impossible d\'ajouter l\'exercice',
