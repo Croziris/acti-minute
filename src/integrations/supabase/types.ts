@@ -527,28 +527,37 @@ export type Database = {
       }
       workout: {
         Row: {
+          circuit_rounds: number | null
           created_at: string | null
           description: string | null
           duree_estimee: number | null
           id: string
+          is_template: boolean | null
           program_id: string | null
           titre: string | null
+          workout_type: string | null
         }
         Insert: {
+          circuit_rounds?: number | null
           created_at?: string | null
           description?: string | null
           duree_estimee?: number | null
           id?: string
+          is_template?: boolean | null
           program_id?: string | null
           titre?: string | null
+          workout_type?: string | null
         }
         Update: {
+          circuit_rounds?: number | null
           created_at?: string | null
           description?: string | null
           duree_estimee?: number | null
           id?: string
+          is_template?: boolean | null
           program_id?: string | null
           titre?: string | null
+          workout_type?: string | null
         }
         Relationships: [
           {
@@ -568,8 +577,10 @@ export type Database = {
           id: string
           order_index: number | null
           reps: number | null
+          rpe_cible: number | null
           series: number | null
           tempo: string | null
+          temps_repos_seconds: number | null
           temps_seconds: number | null
           tips: string | null
           variations: string | null
@@ -582,8 +593,10 @@ export type Database = {
           id?: string
           order_index?: number | null
           reps?: number | null
+          rpe_cible?: number | null
           series?: number | null
           tempo?: string | null
+          temps_repos_seconds?: number | null
           temps_seconds?: number | null
           tips?: string | null
           variations?: string | null
@@ -596,8 +609,10 @@ export type Database = {
           id?: string
           order_index?: number | null
           reps?: number | null
+          rpe_cible?: number | null
           series?: number | null
           tempo?: string | null
+          temps_repos_seconds?: number | null
           temps_seconds?: number | null
           tips?: string | null
           variations?: string | null

@@ -15,6 +15,8 @@ import CoachDashboard from "@/pages/coach/CoachDashboard";
 import CoachClients from "@/pages/coach/CoachClients";
 import CoachClient from "@/pages/coach/CoachClient";
 import CoachBuilder from "@/pages/coach/CoachBuilder";
+import CoachWorkouts from "@/pages/coach/CoachWorkouts";
+import CoachExercises from "@/pages/coach/CoachExercises";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -76,6 +78,16 @@ const App = () => (
             <Route path="/coach/builder/:clientId" element={
               <ProtectedRoute allowedRoles={["coach"]}>
                 <CoachBuilder />
+              </ProtectedRoute>
+            } />
+            <Route path="/coach/workouts" element={
+              <ProtectedRoute allowedRoles={["coach"]}>
+                <CoachWorkouts />
+              </ProtectedRoute>
+            } />
+            <Route path="/coach/exercises" element={
+              <ProtectedRoute allowedRoles={["coach"]}>
+                <CoachExercises />
               </ProtectedRoute>
             } />
 

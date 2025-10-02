@@ -2,39 +2,41 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Edit2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Trash2, Calendar, Clock, Dumbbell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { ExerciseLibrary } from '@/components/exercises/ExerciseLibrary';
+import { AssignWorkoutDialog } from '@/components/coach/AssignWorkoutDialog';
+import { format, parseISO } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
-interface Workout {
+interface WeekPlan {
   id: string;
-  titre: string;
-  description?: string;
-  duree_estimee?: number;
-  exercises?: WorkoutExercise[];
-  workout_exercise?: WorkoutExercise[];
+  iso_week: number;
+  start_date: string;
+  end_date: string;
+  sessions: Session[];
 }
 
-interface WorkoutExercise {
+interface Session {
   id: string;
-  order_index: number;
-  series?: number;
-  reps?: number;
-  tempo?: string;
-  tips?: string;
-  exercise: {
-    id: string;
-    libelle: string;
-    description?: string;
+  index_num: number;
+  statut: string;
+  workout: {
+    titre: string;
+    description: string | null;
+    duree_estimee: number | null;
+    workout_type: 'classic' | 'circuit';
+    circuit_rounds: number | null;
   };
 }
 
@@ -44,51 +46,70 @@ interface Props {
 }
 
 export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
-  const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [weekPlans, setWeekPlans] = useState<WeekPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showNewWorkout, setShowNewWorkout] = useState(false);
-  const [newWorkoutTitle, setNewWorkoutTitle] = useState('');
-  const [newWorkoutDesc, setNewWorkoutDesc] = useState('');
-  const [showExerciseLibrary, setShowExerciseLibrary] = useState(false);
-  const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchWorkouts();
+    fetchWeekPlans();
   }, [programId]);
 
-  const fetchWorkouts = async () => {
+  const fetchWeekPlans = async () => {
     try {
-      const { data, error } = await supabase
-        .from('workout')
+      setLoading(true);
+
+      // Récupérer tous les week_plans avec leurs sessions
+      const { data: weekPlansData, error: weekPlansError } = await supabase
+        .from('week_plan')
         .select(`
           id,
-          titre,
-          description,
-          duree_estimee,
-          workout_exercise (
+          iso_week,
+          start_date,
+          end_date,
+          session (
             id,
-            order_index,
-            series,
-            reps,
-            tempo,
-            tips,
-            exercise:exercise_id (
-              id,
-              libelle,
-              description
+            index_num,
+            statut,
+            workout:workout_id (
+              titre,
+              description,
+              duree_estimee,
+              workout_type,
+              circuit_rounds
             )
           )
         `)
         .eq('program_id', programId)
-        .order('created_at');
+        .order('start_date', { ascending: true });
 
-      if (error) throw error;
-      setWorkouts(data || []);
-    } catch (error) {
+      if (weekPlansError) throw weekPlansError;
+
+      // Organiser les données
+      const organized = (weekPlansData || []).map(wp => ({
+        id: wp.id,
+        iso_week: wp.iso_week,
+        start_date: wp.start_date,
+        end_date: wp.end_date,
+        sessions: (wp.session || [])
+          .filter((s: any) => s.workout)
+          .map((s: any) => ({
+            id: s.id,
+            index_num: s.index_num,
+            statut: s.statut,
+            workout: s.workout
+          }))
+          .sort((a: Session, b: Session) => a.index_num - b.index_num)
+      }));
+
+      setWeekPlans(organized);
+    } catch (error: any) {
+      console.error('Error fetching week plans:', error);
       toast({
         title: 'Erreur',
-        description: 'Impossible de charger les séances',
+        description: 'Impossible de charger le programme',
         variant: 'destructive',
       });
     } finally {
@@ -96,230 +117,186 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
     }
   };
 
-  const createWorkout = async () => {
-    if (!newWorkoutTitle.trim()) return;
+  const handleDeleteSession = async () => {
+    if (!sessionToDelete) return;
 
     try {
-      const { error } = await supabase.from('workout').insert({
-        titre: newWorkoutTitle,
-        description: newWorkoutDesc,
-        program_id: programId,
-      });
+      const { error } = await supabase
+        .from('session')
+        .delete()
+        .eq('id', sessionToDelete);
 
       if (error) throw error;
 
-      toast({ title: 'Séance créée avec succès' });
-      setNewWorkoutTitle('');
-      setNewWorkoutDesc('');
-      setShowNewWorkout(false);
-      fetchWorkouts();
-    } catch (error) {
       toast({
-        title: 'Erreur',
-        description: 'Impossible de créer la séance',
-        variant: 'destructive',
+        title: 'Séance supprimée',
+        description: 'La séance a été retirée du programme'
       });
-    }
-  };
 
-  const deleteWorkout = async (workoutId: string) => {
-    try {
-      const { error } = await supabase.from('workout').delete().eq('id', workoutId);
-      if (error) throw error;
-
-      toast({ title: 'Séance supprimée' });
-      fetchWorkouts();
-    } catch (error) {
+      fetchWeekPlans();
+    } catch (error: any) {
+      console.error('Error deleting session:', error);
       toast({
         title: 'Erreur',
         description: 'Impossible de supprimer la séance',
         variant: 'destructive',
       });
+    } finally {
+      setDeleteDialogOpen(false);
+      setSessionToDelete(null);
     }
   };
 
-  const handleSelectExercise = async (exercise: any) => {
-    if (!selectedWorkoutId) return;
+  const getStatusBadge = (statut: string) => {
+    const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+      planned: { label: 'Planifiée', variant: 'outline' },
+      in_progress: { label: 'En cours', variant: 'default' },
+      completed: { label: 'Complétée', variant: 'secondary' }
+    };
 
-    try {
-      const { data, error } = await supabase.functions.invoke('add-exercise-to-workout', {
-        body: {
-          workout_id: selectedWorkoutId,
-          exercise_id: exercise.id,
-          series: 3,
-          reps: 10,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.error) {
-        toast({
-          title: 'Erreur',
-          description: data.error,
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      toast({ title: 'Exercice ajouté à la séance' });
-      setShowExerciseLibrary(false);
-      fetchWorkouts();
-    } catch (error) {
-      console.error('Error adding exercise to workout:', error);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible d\'ajouter l\'exercice',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const removeExerciseFromWorkout = async (workoutExerciseId: string) => {
-    try {
-      const { error } = await supabase
-        .from('workout_exercise')
-        .delete()
-        .eq('id', workoutExerciseId);
-
-      if (error) throw error;
-
-      toast({ title: 'Exercice retiré de la séance' });
-      fetchWorkouts();
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de retirer l\'exercice',
-        variant: 'destructive',
-      });
-    }
+    const config = statusConfig[statut] || statusConfig.planned;
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
   if (loading) {
-    return <div className="p-6">Chargement...</div>;
+    return <div className="p-6">Chargement du programme...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Séances d'entraînement</h2>
-        <Button onClick={() => setShowNewWorkout(!showNewWorkout)}>
+        <div>
+          <h2 className="text-2xl font-bold">Programme d'entraînement</h2>
+          <p className="text-muted-foreground">
+            Assignez des séances au client par semaine
+          </p>
+        </div>
+        <Button onClick={() => setAssignDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Nouvelle séance
+          Ajouter une séance
         </Button>
       </div>
 
-      {showNewWorkout && (
+      {weekPlans.length === 0 ? (
         <Card>
-          <CardHeader>
-            <CardTitle>Créer une nouvelle séance</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Input
-              placeholder="Titre de la séance"
-              value={newWorkoutTitle}
-              onChange={(e) => setNewWorkoutTitle(e.target.value)}
-            />
-            <Textarea
-              placeholder="Description (optionnel)"
-              value={newWorkoutDesc}
-              onChange={(e) => setNewWorkoutDesc(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <Button onClick={createWorkout}>Créer</Button>
-              <Button variant="outline" onClick={() => setShowNewWorkout(false)}>
-                Annuler
-              </Button>
-            </div>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-medium mb-2">Aucune séance planifiée</p>
+            <p className="text-muted-foreground text-center mb-4">
+              Commencez par ajouter des séances au programme de votre client
+            </p>
+            <Button onClick={() => setAssignDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter une séance
+            </Button>
           </CardContent>
         </Card>
+      ) : (
+        <div className="space-y-6">
+          {weekPlans.map((weekPlan) => (
+            <Card key={weekPlan.id}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5" />
+                      Semaine du {format(parseISO(weekPlan.start_date), 'dd MMM', { locale: fr })} au{' '}
+                      {format(parseISO(weekPlan.end_date), 'dd MMM yyyy', { locale: fr })}
+                    </CardTitle>
+                    <CardDescription>
+                      {weekPlan.sessions.length} séance{weekPlan.sessions.length > 1 ? 's' : ''} planifiée{weekPlan.sessions.length > 1 ? 's' : ''}
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {weekPlan.sessions.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">
+                    Aucune séance pour cette semaine
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {weekPlan.sessions.map((session) => (
+                      <Card key={session.id} className="border-l-4 border-l-primary">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="default">Séance {session.index_num}</Badge>
+                                {getStatusBadge(session.statut)}
+                                {session.workout.workout_type === 'circuit' && (
+                                  <Badge variant="secondary">Circuit</Badge>
+                                )}
+                              </div>
+                              <CardTitle className="text-lg">{session.workout.titre}</CardTitle>
+                              {session.workout.description && (
+                                <CardDescription className="mt-1">
+                                  {session.workout.description}
+                                </CardDescription>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSessionToDelete(session.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            {session.workout.duree_estimee && (
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-4 w-4" />
+                                <span>{session.workout.duree_estimee} min</span>
+                              </div>
+                            )}
+                            {session.workout.workout_type === 'circuit' && session.workout.circuit_rounds && (
+                              <div className="flex items-center gap-1">
+                                <Dumbbell className="h-4 w-4" />
+                                <span>{session.workout.circuit_rounds} tour{session.workout.circuit_rounds > 1 ? 's' : ''}</span>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
 
-      <div className="grid gap-4">
-        {workouts.map((workout) => (
-          <Card key={workout.id}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle>{workout.titre}</CardTitle>
-                  {workout.description && (
-                    <CardDescription>{workout.description}</CardDescription>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedWorkoutId(workout.id);
-                      setShowExerciseLibrary(true);
-                    }}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Ajouter exercice
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => deleteWorkout(workout.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            {workout.workout_exercise && workout.workout_exercise.length > 0 && (
-              <CardContent>
-                <div className="space-y-2">
-                  {workout.workout_exercise
-                    .sort((a: any, b: any) => a.order_index - b.order_index)
-                    .map((we: any) => (
-                      <div
-                        key={we.id}
-                        className="flex items-center justify-between p-3 border rounded-lg"
-                      >
-                        <div className="flex-1">
-                          <div className="font-medium">{we.exercise.libelle}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {we.series} séries × {we.reps} reps
-                            {we.tempo && ` • Tempo: ${we.tempo}`}
-                          </div>
-                          {we.tips && (
-                            <div className="text-sm text-muted-foreground mt-1">
-                              💡 {we.tips}
-                            </div>
-                          )}
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => removeExerciseFromWorkout(we.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
-            )}
-          </Card>
-        ))}
-      </div>
+      <AssignWorkoutDialog
+        open={assignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        clientId={clientId}
+        programId={programId}
+        onSuccess={fetchWeekPlans}
+      />
 
-      <Dialog open={showExerciseLibrary} onOpenChange={setShowExerciseLibrary}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Sélectionner un exercice</DialogTitle>
-            <DialogDescription>
-              Choisissez un exercice à ajouter à cette séance
-            </DialogDescription>
-          </DialogHeader>
-          <ExerciseLibrary
-            onSelectExercise={handleSelectExercise}
-            selectionMode={true}
-          />
-        </DialogContent>
-      </Dialog>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette séance ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. La séance sera retirée du programme.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSession}>
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
