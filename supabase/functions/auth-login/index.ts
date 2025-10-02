@@ -113,23 +113,20 @@ serve(async (req) => {
         );
       }
       authUserId = newUser.user.id;
-      
-      // Mettre à jour l'ID de app_user pour correspondre à auth.users
-      await supabase
+    }
+    
+    // TOUJOURS mettre à jour l'ID de app_user pour correspondre à auth.users
+    // (important pour les utilisateurs créés avant la connexion Auth)
+    if (appUser.id !== authUserId) {
+      console.log(`Updating app_user id from ${appUser.id} to ${authUserId}`);
+      const { error: updateError } = await supabase
         .from('app_user')
         .update({ id: authUserId })
-        .eq('id', appUser.id);
-    }
-
-    // Générer un nouveau access token pour l'utilisateur
-    const { data: sessionData, error: tokenError } = await supabase.auth.admin.createUser({
-      email,
-      password: access_key,
-      email_confirm: true,
-    });
-
-    if (tokenError) {
-      console.error('Error creating session:', tokenError);
+        .eq('credential_id', credential.id);
+      
+      if (updateError) {
+        console.error('Error updating app_user id:', updateError);
+      }
     }
 
     return new Response(
