@@ -7,7 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Play, Filter, Youtube } from 'lucide-react';
+import { Plus, Search, Play, Filter, Youtube, Pencil, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { EditExerciseDialog } from './EditExerciseDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -44,6 +46,8 @@ export const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedGroupe, setSelectedGroupe] = useState<string>('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
+  const [deletingExercise, setDeletingExercise] = useState<Exercise | null>(null);
 
   // New exercise form state
   const [newExercise, setNewExercise] = useState({
@@ -195,6 +199,34 @@ export const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
       setter(array.filter(i => i !== item));
     } else {
       setter([...array, item]);
+    }
+  };
+
+  const handleDeleteExercise = async () => {
+    if (!deletingExercise) return;
+
+    try {
+      const { error } = await supabase
+        .from('exercise')
+        .delete()
+        .eq('id', deletingExercise.id);
+
+      if (error) throw error;
+
+      setExercises(prev => prev.filter(ex => ex.id !== deletingExercise.id));
+      toast({
+        title: "Exercice supprimé",
+        description: "L'exercice a été supprimé de la banque",
+      });
+    } catch (error: any) {
+      console.error('Error deleting exercise:', error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de supprimer l'exercice",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingExercise(null);
     }
   };
 
@@ -496,13 +528,22 @@ export const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
                     )}
                     
                     {user?.role === 'coach' && (
-                      <Button
-                        onClick={() => onSelectExercise?.(exercise)}
-                        size="sm"
-                        className="flex-1"
-                      >
-                        Ajouter à séance
-                      </Button>
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingExercise(exercise)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setDeletingExercise(exercise)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
                     )}
                   </>
                 )}
@@ -523,6 +564,35 @@ export const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Exercise Dialog */}
+      {editingExercise && (
+        <EditExerciseDialog
+          open={!!editingExercise}
+          onOpenChange={(open) => !open && setEditingExercise(null)}
+          exercise={editingExercise}
+          onSuccess={fetchExercises}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingExercise} onOpenChange={(open) => !open && setDeletingExercise(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer l'exercice "{deletingExercise?.libelle}" ?
+              Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteExercise} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

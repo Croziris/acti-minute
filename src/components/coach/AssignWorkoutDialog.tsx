@@ -122,9 +122,9 @@ export const AssignWorkoutDialog: React.FC<Props> = ({
         .select('*')
         .eq('program_id', programId)
         .eq('start_date', format(weekStart, 'yyyy-MM-dd'))
-        .single();
+        .maybeSingle();
 
-      if (weekPlanError && weekPlanError.code !== 'PGRST116') {
+      if (weekPlanError) {
         throw weekPlanError;
       }
 
@@ -169,7 +169,7 @@ export const AssignWorkoutDialog: React.FC<Props> = ({
       console.error('Error assigning workout:', error);
       toast({
         title: "Erreur",
-        description: "Impossible d'assigner la séance",
+        description: error.message || "Impossible d'assigner la séance",
         variant: "destructive"
       });
     } finally {

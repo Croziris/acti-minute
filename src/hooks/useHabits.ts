@@ -84,6 +84,28 @@ export const useHabits = () => {
     };
 
     fetchHabits();
+
+    // Subscribe to real-time updates for habit assignments
+    const channel = supabase
+      .channel('habit_assignments_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'habit_assignment',
+          filter: `client_id=eq.${user.id}`
+        },
+        () => {
+          // Refetch habits when assignments change
+          fetchHabits();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const toggleHabitCheck = async (habitId: string, date: string) => {
