@@ -113,45 +113,37 @@ serve(async (req) => {
         );
       }
       authUserId = newUser.user.id;
-    }
-
-    // Mettre à jour l'ID de app_user pour correspondre à auth.users
-    if (appUser.id !== authUserId) {
+      
+      // Mettre à jour l'ID de app_user pour correspondre à auth.users
       await supabase
         .from('app_user')
         .update({ id: authUserId })
         .eq('id', appUser.id);
-      appUser.id = authUserId;
     }
 
-    // Créer une session en utilisant signInWithPassword
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!
-    );
-
-    const { data: sessionData, error: signInError } = await supabaseClient.auth.signInWithPassword({
+    // Générer un nouveau access token pour l'utilisateur
+    const { data: sessionData, error: tokenError } = await supabase.auth.admin.createUser({
       email,
       password: access_key,
+      email_confirm: true,
     });
 
-    if (signInError) {
-      console.error('Error signing in:', signInError);
-      return new Response(
-        JSON.stringify({ error: 'Could not create session' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (tokenError) {
+      console.error('Error creating session:', tokenError);
     }
 
     return new Response(
       JSON.stringify({ 
         user: {
-          id: appUser.id,
+          id: authUserId,
           role: appUser.role,
           handle: appUser.handle,
           avatar_url: appUser.avatar_url
         },
-        session: sessionData.session
+        auth: {
+          email,
+          password: access_key
+        }
       }),
       { 
         status: 200,

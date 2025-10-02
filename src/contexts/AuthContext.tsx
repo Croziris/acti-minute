@@ -98,12 +98,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(data.user);
         localStorage.setItem('auth_user', JSON.stringify(data.user));
         
-        // Configurer la session Supabase si disponible
-        if (data.session) {
-          await supabase.auth.setSession({
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
+        // Se connecter via Supabase Auth avec les credentials
+        if (data.auth) {
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: data.auth.email,
+            password: data.auth.password,
           });
+
+          if (authError) {
+            console.error('Auth error:', authError);
+            return { error: "Erreur lors de l'authentification Supabase" };
+          }
         }
         
         return {};
