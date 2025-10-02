@@ -625,7 +625,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_auth_user_from_credential: {
+        Args: { p_credential_id: string; p_email: string; p_password: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

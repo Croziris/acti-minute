@@ -85,6 +85,64 @@ serve(async (req) => {
       );
     }
 
+    // Créer ou récupérer l'utilisateur Auth Supabase
+    const email = `${username}@app.local`;
+
+    // Vérifier si l'utilisateur existe déjà
+    const { data: existingUsers } = await supabase.auth.admin.listUsers();
+    let authUserId = existingUsers?.users.find(u => u.email === email)?.id;
+
+    if (!authUserId) {
+      // Créer l'utilisateur Auth Supabase
+      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+        email,
+        password: access_key,
+        email_confirm: true,
+        user_metadata: {
+          app_user_id: appUser.id,
+          role: appUser.role,
+          handle: appUser.handle
+        }
+      });
+
+      if (createError) {
+        console.error('Error creating auth user:', createError);
+        return new Response(
+          JSON.stringify({ error: 'Could not create auth session' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      authUserId = newUser.user.id;
+    }
+
+    // Mettre à jour l'ID de app_user pour correspondre à auth.users
+    if (appUser.id !== authUserId) {
+      await supabase
+        .from('app_user')
+        .update({ id: authUserId })
+        .eq('id', appUser.id);
+      appUser.id = authUserId;
+    }
+
+    // Créer une session en utilisant signInWithPassword
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!
+    );
+
+    const { data: sessionData, error: signInError } = await supabaseClient.auth.signInWithPassword({
+      email,
+      password: access_key,
+    });
+
+    if (signInError) {
+      console.error('Error signing in:', signInError);
+      return new Response(
+        JSON.stringify({ error: 'Could not create session' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ 
         user: {
@@ -92,7 +150,8 @@ serve(async (req) => {
           role: appUser.role,
           handle: appUser.handle,
           avatar_url: appUser.avatar_url
-        }
+        },
+        session: sessionData.session
       }),
       { 
         status: 200,

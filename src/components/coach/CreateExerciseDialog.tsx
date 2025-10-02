@@ -49,8 +49,6 @@ export const CreateExerciseDialog: React.FC<Props> = ({ open, onOpenChange, onSu
     try {
       setLoading(true);
 
-      const { data: { session } } = await supabase.auth.getSession();
-
       const { data, error } = await supabase.functions.invoke('create-exercise', {
         body: {
           libelle: libelle.trim(),
@@ -60,9 +58,6 @@ export const CreateExerciseDialog: React.FC<Props> = ({ open, onOpenChange, onSu
           categories: [],
           groupes: [],
           materiel: [],
-        },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
         },
       });
 

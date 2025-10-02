@@ -67,6 +67,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data?.user) {
         setUser(data.user);
         localStorage.setItem('auth_user', JSON.stringify(data.user));
+        
+        // Configurer la session Supabase si disponible
+        if (data.session?.access_token) {
+          await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.access_token, // Using same token as fallback
+          });
+        }
+        
         return {};
       }
 
@@ -81,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     setUser(null);
     localStorage.removeItem('auth_user');
+    await supabase.auth.signOut();
   };
 
   return (

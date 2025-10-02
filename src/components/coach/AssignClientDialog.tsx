@@ -93,13 +93,8 @@ export const AssignClientDialog: React.FC<Props> = ({ open, onOpenChange, onSucc
     try {
       setLoading(true);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      
       const { data, error } = await supabase.functions.invoke('link-client-to-coach', {
         body: { client_id: clientId },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
       });
 
       if (error) throw error;
