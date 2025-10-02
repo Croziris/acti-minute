@@ -36,26 +36,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        // Récupérer les infos complètes de l'utilisateur depuis app_user
-        const { data: appUser } = await supabase
-          .from('app_user')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
+        // Récupérer l'app_user_id depuis les métadonnées du JWT
+        const appUserId = session.user.user_metadata?.app_user_id;
         
-        if (appUser) {
-          setUser({
-            id: appUser.id,
-            role: appUser.role as UserRole,
-            handle: appUser.handle || undefined,
-            avatar_url: appUser.avatar_url || undefined,
-          });
-          localStorage.setItem('auth_user', JSON.stringify({
-            id: appUser.id,
-            role: appUser.role,
-            handle: appUser.handle,
-            avatar_url: appUser.avatar_url,
-          }));
+        if (appUserId) {
+          // Récupérer les infos complètes de l'utilisateur depuis app_user
+          const { data: appUser } = await supabase
+            .from('app_user')
+            .select('*')
+            .eq('id', appUserId)
+            .single();
+          
+          if (appUser) {
+            setUser({
+              id: appUser.id,
+              role: appUser.role as UserRole,
+              handle: appUser.handle || undefined,
+              avatar_url: appUser.avatar_url || undefined,
+            });
+            localStorage.setItem('auth_user', JSON.stringify({
+              id: appUser.id,
+              role: appUser.role,
+              handle: appUser.handle,
+              avatar_url: appUser.avatar_url,
+            }));
+          }
         }
       } else {
         // Sinon vérifier le local storage
