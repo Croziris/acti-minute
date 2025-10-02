@@ -63,7 +63,8 @@ export const useWeeklyProgram = () => {
         }
 
         // Try to get existing week plan for this program
-        const { data: weekPlanData, error: weekError } = await supabase
+        // First try current week, then get the most recent or next available week plan
+        let { data: weekPlanData, error: weekError } = await supabase
           .from('week_plan')
           .select('*')
           .eq('program_id', programData.id)
@@ -72,8 +73,30 @@ export const useWeeklyProgram = () => {
 
         if (weekError) throw weekError;
 
+        // If no plan for current week, get the closest week plan (most recent or next upcoming)
         if (!weekPlanData) {
-          // No week plan found, create placeholder
+          const { data: allWeekPlans, error: allWeeksError } = await supabase
+            .from('week_plan')
+            .select('*')
+            .eq('program_id', programData.id)
+            .order('iso_week', { ascending: false })
+            .limit(10);
+
+          if (allWeeksError) throw allWeeksError;
+
+          if (allWeekPlans && allWeekPlans.length > 0) {
+            // Find closest week plan (prefer future weeks, then most recent past week)
+            const futureWeeks = allWeekPlans.filter(wp => wp.iso_week >= currentISOWeek);
+            const pastWeeks = allWeekPlans.filter(wp => wp.iso_week < currentISOWeek);
+            
+            weekPlanData = futureWeeks.length > 0 
+              ? futureWeeks[futureWeeks.length - 1] // Closest future week
+              : pastWeeks[0]; // Most recent past week
+          }
+        }
+
+        if (!weekPlanData) {
+          // No week plan found at all, create placeholder
           setWeekPlan({
             id: '',
             iso_week: currentISOWeek,

@@ -99,10 +99,16 @@ const ClientHome = () => {
                   <span>Programme de la semaine</span>
                 </CardTitle>
                 <CardDescription>
-                  {weekPlan ? 
-                    `Semaine du ${new Date(weekPlan.start_date).toLocaleDateString('fr-FR')} au ${new Date(weekPlan.end_date).toLocaleDateString('fr-FR')}` :
-                    'Chargement...'
-                  }
+                  {weekPlan ? (
+                    <>
+                      Semaine du {new Date(weekPlan.start_date).toLocaleDateString('fr-FR')} au {new Date(weekPlan.end_date).toLocaleDateString('fr-FR')}
+                      {weekPlan.iso_week !== Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 1).getTime()) / 604800000) + 1 && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          (Semaine {weekPlan.iso_week})
+                        </span>
+                      )}
+                    </>
+                  ) : 'Chargement...'}
                 </CardDescription>
               </div>
             </div>
