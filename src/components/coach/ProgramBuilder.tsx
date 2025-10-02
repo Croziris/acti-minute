@@ -142,12 +142,17 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
     if (!selectedWorkoutId) return;
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+
       const { data, error } = await supabase.functions.invoke('add-exercise-to-workout', {
         body: {
           workout_id: selectedWorkoutId,
           exercise_id: exercise.id,
           series: 3,
           reps: 10,
+        },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
         },
       });
 
