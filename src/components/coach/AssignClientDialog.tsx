@@ -18,6 +18,8 @@ interface Client {
   id: string;
   handle: string;
   avatar_url?: string;
+  coach_handle?: string;
+  is_available: boolean;
 }
 
 interface Props {
@@ -64,21 +66,42 @@ export const AssignClientDialog: React.FC<Props> = ({ open, onOpenChange, onSucc
 
       if (clientsError) throw clientsError;
 
-      // Récupérer les clients déjà liés à ce coach
-      const { data: linkedPrograms, error: programsError } = await supabase
+      // Récupérer tous les programmes avec les infos des coaches
+      const { data: allPrograms, error: programsError } = await supabase
         .from('program')
-        .select('client_id')
-        .eq('coach_id', user?.id);
+        .select(`
+          client_id,
+          coach_id,
+          coach:coach_id (
+            handle
+          )
+        `);
 
       if (programsError) throw programsError;
 
-      const linkedClientIds = new Set(linkedPrograms?.map((p) => p.client_id) || []);
+      // Créer une map des clients avec leur coach
+      const clientCoachMap = new Map();
+      allPrograms?.forEach((p: any) => {
+        clientCoachMap.set(p.client_id, {
+          coach_id: p.coach_id,
+          coach_handle: p.coach?.handle || 'Coach inconnu'
+        });
+      });
 
-      // Filtrer les clients non liés
-      const availableClients = allClients?.filter((c) => !linkedClientIds.has(c.id)) || [];
-      setClients(availableClients);
-      setFilteredClients(availableClients);
+      // Enrichir les clients avec les infos d'assignation
+      const enrichedClients = allClients?.map((c) => {
+        const assignment = clientCoachMap.get(c.id);
+        return {
+          ...c,
+          coach_handle: assignment?.coach_handle,
+          is_available: !assignment || assignment.coach_id === user?.id
+        };
+      }) || [];
+
+      setClients(enrichedClients);
+      setFilteredClients(enrichedClients);
     } catch (error) {
+      console.error('Error fetching clients:', error);
       toast({
         title: 'Erreur',
         description: 'Impossible de charger les sportif·ves',
@@ -155,29 +178,38 @@ export const AssignClientDialog: React.FC<Props> = ({ open, onOpenChange, onSucc
               </div>
             ) : filteredClients.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {search ? 'Aucun résultat' : 'Tous les sportif·ves sont déjà assigné·es'}
+                {search ? 'Aucun résultat' : 'Aucun·e sportif·ve trouvé·e'}
               </div>
             ) : (
               filteredClients.map((client) => (
                 <div
                   key={client.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-colors"
+                  className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
+                    client.is_available ? 'hover:bg-accent' : 'opacity-60'
+                  }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1">
                     <Avatar>
                       <AvatarImage src={client.avatar_url} />
                       <AvatarFallback>
                         {client.handle.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="font-medium">{client.handle}</span>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{client.handle}</span>
+                      {client.coach_handle && (
+                        <span className="text-xs text-muted-foreground">
+                          Assigné·e à {client.coach_handle}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <Button
                     size="sm"
                     onClick={() => handleAssignClient(client.id)}
-                    disabled={loading}
+                    disabled={loading || !client.is_available}
                   >
-                    Assigner
+                    {client.is_available ? 'Assigner' : 'Non disponible'}
                   </Button>
                 </div>
               ))

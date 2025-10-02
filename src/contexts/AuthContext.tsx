@@ -32,16 +32,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Vérifier s'il y a un utilisateur connecté en local storage
-    const storedUser = localStorage.getItem('auth_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        localStorage.removeItem('auth_user');
+    // Vérifier la session Supabase d'abord
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        // Récupérer les infos complètes de l'utilisateur depuis app_user
+        const { data: appUser } = await supabase
+          .from('app_user')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (appUser) {
+          setUser({
+            id: appUser.id,
+            role: appUser.role as UserRole,
+            handle: appUser.handle || undefined,
+            avatar_url: appUser.avatar_url || undefined,
+          });
+          localStorage.setItem('auth_user', JSON.stringify({
+            id: appUser.id,
+            role: appUser.role,
+            handle: appUser.handle,
+            avatar_url: appUser.avatar_url,
+          }));
+        }
+      } else {
+        // Sinon vérifier le local storage
+        const storedUser = localStorage.getItem('auth_user');
+        if (storedUser) {
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch (error) {
+            localStorage.removeItem('auth_user');
+          }
+        }
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    checkSession();
   }, []);
 
   const login = async (role: UserRole, username: string, accessKey: string) => {
@@ -69,10 +99,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('auth_user', JSON.stringify(data.user));
         
         // Configurer la session Supabase si disponible
-        if (data.session?.access_token) {
+        if (data.session) {
           await supabase.auth.setSession({
             access_token: data.session.access_token,
-            refresh_token: data.session.access_token, // Using same token as fallback
+            refresh_token: data.session.refresh_token,
           });
         }
         
