@@ -32,7 +32,8 @@ serve(async (req) => {
     }
 
     // Récupérer le vrai app_user_id depuis les métadonnées ou utiliser user.id comme fallback
-    const appUserId = user.user_metadata?.app_user_id || user.id;
+    // Utiliser app_metadata (sécurisé) et non user_metadata (modifiable par le client)
+    const appUserId = user.app_metadata?.app_user_id || user.id;
 
     // Vérifier le rôle
     const { data: appUser, error: roleError } = await supabaseClient

@@ -109,14 +109,28 @@ serve(async (req) => {
     if (existingAuthUser) {
       console.log(`✅ Auth user already exists: ${existingAuthUser.id}`);
       authUserId = existingAuthUser.id;
+      
+      // Mettre à jour les métadonnées si nécessaire (app_metadata, pas user_metadata pour la sécurité)
+      console.log('🔄 Updating auth user metadata...');
+      await supabase.auth.admin.updateUserById(authUserId, {
+        app_metadata: {
+          app_user_id: appUser.id
+        },
+        user_metadata: {
+          role: appUser.role,
+          handle: appUser.handle
+        }
+      });
     } else {
       console.log('🆕 Creating new auth user...');
       const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
         email,
         password: access_key,
         email_confirm: true,
+        app_metadata: {
+          app_user_id: appUser.id
+        },
         user_metadata: {
-          app_user_id: appUser.id,
           role: appUser.role,
           handle: appUser.handle
         }
