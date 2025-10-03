@@ -648,6 +648,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      is_client: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_coach: {
         Args: Record<PropertyKey, never>
         Returns: boolean
