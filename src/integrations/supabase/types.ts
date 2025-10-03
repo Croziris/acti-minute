@@ -644,10 +644,6 @@ export type Database = {
         Args: { p_credential_id: string; p_email: string; p_password: string }
         Returns: string
       }
-      get_app_user_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
       is_coach: {
         Args: Record<PropertyKey, never>
         Returns: boolean
