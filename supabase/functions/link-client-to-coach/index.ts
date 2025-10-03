@@ -31,11 +31,14 @@ serve(async (req) => {
       );
     }
 
+    // Récupérer le vrai app_user_id depuis les métadonnées ou utiliser user.id comme fallback
+    const appUserId = user.user_metadata?.app_user_id || user.id;
+
     // Vérifier le rôle
     const { data: appUser, error: roleError } = await supabaseClient
       .from('app_user')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', appUserId)
       .single();
 
     if (roleError || !appUser || appUser.role !== 'coach') {
@@ -74,7 +77,7 @@ serve(async (req) => {
       .from('program')
       .select('id')
       .eq('client_id', client_id)
-      .eq('coach_id', user.id)
+      .eq('coach_id', appUserId)
       .maybeSingle();
 
     if (existingProgram) {
@@ -89,7 +92,7 @@ serve(async (req) => {
       .from('program')
       .insert({
         client_id,
-        coach_id: user.id,
+        coach_id: appUserId,
         titre: 'Programme personnalisé',
         statut: 'draft',
       })
