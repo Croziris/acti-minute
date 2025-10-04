@@ -6,7 +6,7 @@ export const CoachBottomNav = () => {
   const location = useLocation();
   
   const navItems = [
-    { to: '/coach', icon: Home, label: 'Dashboard', exactMatch: true },
+    { to: '/coach/dashboard', icon: Home, label: 'Dashboard', exactMatch: true },
     { to: '/coach/clients', icon: Users, label: 'Clients', exactMatch: false },
     { to: '/coach/workouts', icon: Dumbbell, label: 'Séances', exactMatch: false },
     { to: '/coach/exercises', icon: BookOpen, label: 'Exercices', exactMatch: false },

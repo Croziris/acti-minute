@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { LayoutDashboard, Users, Settings, LogOut, Dumbbell, ClipboardList, Library } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CoachBottomNav } from '@/components/coach/CoachBottomNav';
+import { CoachMobileHeader } from '@/components/coach/CoachMobileHeader';
 
 interface CoachLayoutProps {
   children: React.ReactNode;
@@ -25,6 +26,9 @@ export const CoachLayout: React.FC<CoachLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-background flex w-full">
+      {/* Header mobile */}
+      <CoachMobileHeader />
+      
       {/* Sidebar desktop - cachée sur mobile */}
       <aside className="hidden md:flex md:w-64 bg-nav text-nav-foreground flex-col">
         <div className="p-6">
@@ -99,8 +103,8 @@ export const CoachLayout: React.FC<CoachLayoutProps> = ({ children }) => {
         </div>
       </aside>
 
-      {/* Contenu principal - padding bottom sur mobile pour la bottom nav */}
-      <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+      {/* Contenu principal - padding bottom sur mobile pour la bottom nav, padding top pour header mobile */}
+      <main className="flex-1 overflow-y-auto pb-20 md:pb-0 pt-14 md:pt-0">
         <div className="p-4 md:p-8">{children}</div>
       </main>
 

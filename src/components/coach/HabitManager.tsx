@@ -7,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ClientHabitsTracker } from './ClientHabitsTracker';
 
 interface Habit {
   id: string;
@@ -168,13 +170,20 @@ export const HabitManager: React.FC<Props> = ({ clientId }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Habitudes du client</h2>
-        <Button onClick={() => setShowNewHabit(!showNewHabit)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nouvelle habitude
-        </Button>
-      </div>
+      <Tabs defaultValue="assign" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="assign">Assigner habitudes</TabsTrigger>
+          <TabsTrigger value="tracking">Suivi & Statistiques</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="assign" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Habitudes du client</h2>
+            <Button onClick={() => setShowNewHabit(!showNewHabit)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nouvelle habitude
+            </Button>
+          </div>
 
       {showNewHabit && (
         <Card>
@@ -225,6 +234,12 @@ export const HabitManager: React.FC<Props> = ({ clientId }) => {
           );
         })}
       </div>
+        </TabsContent>
+
+        <TabsContent value="tracking">
+          <ClientHabitsTracker clientId={clientId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

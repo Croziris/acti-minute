@@ -534,6 +534,7 @@ export type Database = {
           id: string
           is_template: boolean | null
           program_id: string | null
+          temps_repos_tours_seconds: number | null
           titre: string | null
           workout_type: string | null
         }
@@ -545,6 +546,7 @@ export type Database = {
           id?: string
           is_template?: boolean | null
           program_id?: string | null
+          temps_repos_tours_seconds?: number | null
           titre?: string | null
           workout_type?: string | null
         }
@@ -556,6 +558,7 @@ export type Database = {
           id?: string
           is_template?: boolean | null
           program_id?: string | null
+          temps_repos_tours_seconds?: number | null
           titre?: string | null
           workout_type?: string | null
         }

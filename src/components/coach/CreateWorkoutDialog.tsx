@@ -26,6 +26,7 @@ export const CreateWorkoutDialog: React.FC<Props> = ({ open, onOpenChange, onSuc
   const [dureeEstimee, setDureeEstimee] = useState('');
   const [workoutType, setWorkoutType] = useState<'classic' | 'circuit'>('classic');
   const [circuitRounds, setCircuitRounds] = useState('');
+  const [tempsReposTours, setTempsReposTours] = useState('60');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -35,6 +36,7 @@ export const CreateWorkoutDialog: React.FC<Props> = ({ open, onOpenChange, onSuc
     setDureeEstimee('');
     setWorkoutType('classic');
     setCircuitRounds('');
+    setTempsReposTours('60');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,6 +71,7 @@ export const CreateWorkoutDialog: React.FC<Props> = ({ open, onOpenChange, onSuc
           duree_estimee: dureeEstimee ? parseInt(dureeEstimee) : null,
           workout_type: workoutType,
           circuit_rounds: workoutType === 'circuit' ? parseInt(circuitRounds) : null,
+          temps_repos_tours_seconds: workoutType === 'circuit' ? parseInt(tempsReposTours) : null,
           is_template: true
         });
 
@@ -158,18 +161,37 @@ export const CreateWorkoutDialog: React.FC<Props> = ({ open, onOpenChange, onSuc
           </div>
 
           {workoutType === 'circuit' && (
-            <div>
-              <Label htmlFor="rounds">Nombre de tours *</Label>
-              <Input
-                id="rounds"
-                type="number"
-                value={circuitRounds}
-                onChange={(e) => setCircuitRounds(e.target.value)}
-                placeholder="Ex: 4"
-                min="1"
-                required
-              />
-            </div>
+            <>
+              <div>
+                <Label htmlFor="rounds">Nombre de tours *</Label>
+                <Input
+                  id="rounds"
+                  type="number"
+                  value={circuitRounds}
+                  onChange={(e) => setCircuitRounds(e.target.value)}
+                  placeholder="Ex: 4"
+                  min="1"
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="rest">Temps de repos entre tours (secondes)</Label>
+                <Input
+                  id="rest"
+                  type="number"
+                  value={tempsReposTours}
+                  onChange={(e) => setTempsReposTours(e.target.value)}
+                  placeholder="60"
+                  min="0"
+                  max="300"
+                  step="15"
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  Repos recommandé : 30-90 secondes
+                </p>
+              </div>
+            </>
           )}
 
           <div className="flex justify-end gap-2 pt-4">
