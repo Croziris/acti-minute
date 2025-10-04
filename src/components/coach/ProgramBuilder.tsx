@@ -3,9 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Calendar, Clock, Dumbbell } from 'lucide-react';
+import { Plus, Trash2, Calendar, Clock, Dumbbell, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AssignWorkoutDialog } from '@/components/coach/AssignWorkoutDialog';
+import { SessionDetailsModal } from '@/components/coach/SessionDetailsModal';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -51,6 +52,8 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -149,13 +152,21 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
 
   const getStatusBadge = (statut: string) => {
     const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-      planned: { label: 'Planifiée', variant: 'outline' },
+      planned: { label: 'À faire', variant: 'outline' },
       in_progress: { label: 'En cours', variant: 'default' },
-      completed: { label: 'Complétée', variant: 'secondary' }
+      completed: { label: 'Terminée', variant: 'secondary' },
+      skipped: { label: 'Sautée', variant: 'destructive' }
     };
 
     const config = statusConfig[statut] || statusConfig.planned;
     return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const handleSessionClick = (session: Session) => {
+    if (session.statut === 'completed' || session.statut === 'skipped') {
+      setSelectedSessionId(session.id);
+      setDetailsModalOpen(true);
+    }
   };
 
   if (loading) {
@@ -217,7 +228,15 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
                 ) : (
                   <div className="space-y-3">
                     {weekPlan.sessions.map((session) => (
-                      <Card key={session.id} className="border-l-4 border-l-primary">
+                      <Card 
+                        key={session.id} 
+                        className={`border-l-4 border-l-primary ${
+                          (session.statut === 'completed' || session.statut === 'skipped') 
+                            ? 'cursor-pointer hover:shadow-md transition-shadow' 
+                            : ''
+                        }`}
+                        onClick={() => handleSessionClick(session)}
+                      >
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
@@ -226,6 +245,12 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
                                 {getStatusBadge(session.statut)}
                                 {session.workout.workout_type === 'circuit' && (
                                   <Badge variant="secondary">Circuit</Badge>
+                                )}
+                                {(session.statut === 'completed' || session.statut === 'skipped') && (
+                                  <Badge variant="outline" className="gap-1">
+                                    <Eye className="h-3 w-3" />
+                                    Voir détails
+                                  </Badge>
                                 )}
                               </div>
                               <CardTitle className="text-lg">{session.workout.titre}</CardTitle>
@@ -238,7 +263,8 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSessionToDelete(session.id);
                                 setDeleteDialogOpen(true);
                               }}
@@ -280,6 +306,14 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
         programId={programId}
         onSuccess={fetchWeekPlans}
       />
+
+      {selectedSessionId && (
+        <SessionDetailsModal
+          open={detailsModalOpen}
+          onOpenChange={setDetailsModalOpen}
+          sessionId={selectedSessionId}
+        />
+      )}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
