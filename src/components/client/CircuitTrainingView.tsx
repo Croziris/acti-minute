@@ -4,15 +4,24 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Timer, CheckCircle, Dumbbell } from 'lucide-react';
+import { CircuitExerciseCard } from './CircuitExerciseCard';
 
 interface Exercise {
   exercise_id: string;
   order_index?: number;
   reps?: number | null;
   temps_seconds?: number | null;
+  charge_cible?: number | null;
+  tips?: string | null;
+  variations?: string | null;
   exercise: {
     id: string;
     libelle: string;
+    description?: string;
+    video_id?: string;
+    youtube_url?: string;
+    categories: string[];
+    groupes: string[];
   };
 }
 
@@ -103,33 +112,18 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
       )}
 
       {/* Circuit Exercises List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Exercices du circuit</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {exercises
-              .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
-              .map((we, idx) => (
-                <div
-                  key={we.exercise_id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="font-mono">
-                      {idx + 1}
-                    </Badge>
-                    <span className="font-medium">{we.exercise.libelle}</span>
-                  </div>
-                  <span className="text-sm text-muted-foreground">
-                    {we.reps ? `${we.reps} reps` : `${we.temps_seconds}s`}
-                  </span>
-                </div>
-              ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Exercices du circuit</h3>
+        {exercises
+          .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+          .map((we, idx) => (
+            <CircuitExerciseCard 
+              key={we.exercise_id} 
+              exercise={we} 
+              index={idx}
+            />
+          ))}
+      </div>
 
       {/* Round Buttons */}
       <Card>
