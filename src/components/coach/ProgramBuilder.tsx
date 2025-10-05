@@ -163,10 +163,8 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
   };
 
   const handleSessionClick = (session: Session) => {
-    if (session.statut === 'completed' || session.statut === 'skipped') {
-      setSelectedSessionId(session.id);
-      setDetailsModalOpen(true);
-    }
+    setSelectedSessionId(session.id);
+    setDetailsModalOpen(true);
   };
 
   if (loading) {
@@ -230,11 +228,7 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
                     {weekPlan.sessions.map((session) => (
                       <Card 
                         key={session.id} 
-                        className={`border-l-4 border-l-primary ${
-                          (session.statut === 'completed' || session.statut === 'skipped') 
-                            ? 'cursor-pointer hover:shadow-md transition-shadow' 
-                            : ''
-                        }`}
+                        className="border-l-4 border-l-primary cursor-pointer hover:shadow-md transition-shadow"
                         onClick={() => handleSessionClick(session)}
                       >
                         <CardHeader className="pb-3">
@@ -246,12 +240,10 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
                                 {session.workout.workout_type === 'circuit' && (
                                   <Badge variant="secondary">Circuit</Badge>
                                 )}
-                                {(session.statut === 'completed' || session.statut === 'skipped') && (
-                                  <Badge variant="outline" className="gap-1">
-                                    <Eye className="h-3 w-3" />
-                                    Voir détails
-                                  </Badge>
-                                )}
+                                <Badge variant="outline" className="gap-1">
+                                  <Eye className="h-3 w-3" />
+                                  Voir détails
+                                </Badge>
                               </div>
                               <CardTitle className="text-lg">{session.workout.titre}</CardTitle>
                               {session.workout.description && (
