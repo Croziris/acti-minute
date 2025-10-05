@@ -116,12 +116,12 @@ export const AssignWorkoutDialog: React.FC<Props> = ({
       const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
       const isoWeek = Math.ceil((weekStart.getTime() - new Date(weekStart.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000));
 
-      // Créer ou récupérer le week_plan
+      // Vérifier si un week_plan existe déjà pour cette semaine ET ce programme
       let { data: weekPlan, error: weekPlanError } = await supabase
         .from('week_plan')
         .select('*')
         .eq('program_id', programId)
-        .eq('start_date', format(weekStart, 'yyyy-MM-dd'))
+        .eq('iso_week', isoWeek)
         .maybeSingle();
 
       if (weekPlanError) {
@@ -129,6 +129,7 @@ export const AssignWorkoutDialog: React.FC<Props> = ({
       }
 
       if (!weekPlan) {
+        // Le week_plan n'existe pas, le créer
         const { data: newWeekPlan, error: createError } = await supabase
           .from('week_plan')
           .insert({
@@ -136,13 +137,23 @@ export const AssignWorkoutDialog: React.FC<Props> = ({
             iso_week: isoWeek,
             start_date: format(weekStart, 'yyyy-MM-dd'),
             end_date: format(weekEnd, 'yyyy-MM-dd'),
-            expected_sessions: 4
+            expected_sessions: 1
           })
           .select()
           .single();
 
         if (createError) throw createError;
         weekPlan = newWeekPlan;
+      } else {
+        // Le week_plan existe déjà, incrémenter expected_sessions
+        const { error: updateError } = await supabase
+          .from('week_plan')
+          .update({ 
+            expected_sessions: (weekPlan.expected_sessions || 0) + 1 
+          })
+          .eq('id', weekPlan.id);
+
+        if (updateError) throw updateError;
       }
 
       // Créer la session

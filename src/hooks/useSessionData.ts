@@ -17,6 +17,9 @@ export interface Session {
     titre: string;
     description?: string;
     duree_estimee?: number;
+    workout_type?: string;
+    circuit_rounds?: number;
+    temps_repos_tours_seconds?: number;
     workout_exercise: Array<{
       id: string;
       exercise_id: string;
@@ -71,7 +74,10 @@ export const useSessionData = (sessionId?: string) => {
               id,
               titre,
               description,
-              duree_estimee
+              duree_estimee,
+              workout_type,
+              circuit_rounds,
+              temps_repos_tours_seconds
             `)
             .eq('id', sessionData.workout_id)
             .single();

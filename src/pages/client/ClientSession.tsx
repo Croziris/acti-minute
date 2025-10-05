@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { SessionTimer } from '@/components/session/SessionTimer';
 import { ExerciseCard } from '@/components/session/ExerciseCard';
 import { ProofUpload } from '@/components/session/ProofUpload';
+import { CircuitTrainingView } from '@/components/client/CircuitTrainingView';
 import { useSessionData } from '@/hooks/useSessionData';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { supabase } from '@/integrations/supabase/client';
@@ -119,6 +120,22 @@ const ClientSession = () => {
     setCompletedExercises(prev => new Set(prev).add(exerciseId));
   };
 
+  const handleRoundComplete = async (roundNumber: number) => {
+    if (!session || !user) return;
+    
+    // Pour circuit training, on peut logger le tour complété
+    toast({
+      title: `Tour ${roundNumber} terminé`,
+      description: `Encore ${session.workout.circuit_rounds! - roundNumber} tour(s) !`
+    });
+  };
+
+  const handleCircuitComplete = () => {
+    // Marquer tous les exercices comme complétés
+    const allExerciseIds = exercises.map(e => e.exercise.id);
+    setCompletedExercises(new Set(allExerciseIds));
+  };
+
   if (loading) {
     return (
       <ClientLayout>
@@ -153,6 +170,7 @@ const ClientSession = () => {
   }
 
   const exercises = session.workout?.workout_exercise || [];
+  const isCircuitWorkout = session.workout?.workout_type === 'circuit';
   const completionRate = exercises.length > 0 ? (completedExercises.size / exercises.length) * 100 : 0;
   const canComplete = completionRate >= 100 || completedExercises.size === exercises.length;
 
@@ -234,22 +252,33 @@ const ClientSession = () => {
           </Card>
         )}
 
-        {/* Exercises */}
+        {/* Exercises - Mode Circuit ou Classique */}
         {sessionStarted && exercises.length > 0 && (
-          <div className="space-y-6">
-            {exercises.map((workoutExercise, index) => (
-              <ExerciseCard
-                key={workoutExercise.id}
-                exercise={workoutExercise.exercise}
-                workoutExercise={workoutExercise}
-                sessionId={session.id}
-                onSetComplete={() => {}}
-                onFeedback={(feedback) => {
-                  handleExerciseComplete(workoutExercise.exercise.id);
-                }}
-              />
-            ))}
-          </div>
+          isCircuitWorkout ? (
+            <CircuitTrainingView
+              exercises={exercises}
+              circuitRounds={session.workout.circuit_rounds || 3}
+              restTime={session.workout.temps_repos_tours_seconds || 60}
+              sessionId={session.id}
+              onRoundComplete={handleRoundComplete}
+              onAllComplete={handleCircuitComplete}
+            />
+          ) : (
+            <div className="space-y-6">
+              {exercises.map((workoutExercise, index) => (
+                <ExerciseCard
+                  key={workoutExercise.id}
+                  exercise={workoutExercise.exercise}
+                  workoutExercise={workoutExercise}
+                  sessionId={session.id}
+                  onSetComplete={() => {}}
+                  onFeedback={(feedback) => {
+                    handleExerciseComplete(workoutExercise.exercise.id);
+                  }}
+                />
+              ))}
+            </div>
+          )
         )}
 
         {/* Complete Session */}
