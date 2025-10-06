@@ -107,7 +107,26 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
           .sort((a: Session, b: Session) => a.index_num - b.index_num)
       }));
 
-      setWeekPlans(organized);
+      // Trier les semaines : semaine actuelle en premier, puis futures, puis passées
+      const now = new Date();
+      const sorted = organized.sort((a, b) => {
+        const aStart = parseISO(a.start_date);
+        const aEnd = parseISO(a.end_date);
+        const bStart = parseISO(b.start_date);
+        const bEnd = parseISO(b.end_date);
+        
+        const aIsCurrent = now >= aStart && now <= aEnd;
+        const bIsCurrent = now >= bStart && now <= bEnd;
+        
+        // Semaine actuelle toujours en premier
+        if (aIsCurrent && !bIsCurrent) return -1;
+        if (!aIsCurrent && bIsCurrent) return 1;
+        
+        // Sinon, ordre chronologique
+        return aStart.getTime() - bStart.getTime();
+      });
+
+      setWeekPlans(sorted);
     } catch (error: any) {
       console.error('Error fetching week plans:', error);
       toast({
@@ -202,22 +221,31 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
         </Card>
       ) : (
         <div className="space-y-6">
-          {weekPlans.map((weekPlan) => (
-            <Card key={weekPlan.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5" />
-                      Semaine du {format(parseISO(weekPlan.start_date), 'dd MMM', { locale: fr })} au{' '}
-                      {format(parseISO(weekPlan.end_date), 'dd MMM yyyy', { locale: fr })}
-                    </CardTitle>
-                    <CardDescription>
-                      {weekPlan.sessions.length} séance{weekPlan.sessions.length > 1 ? 's' : ''} planifiée{weekPlan.sessions.length > 1 ? 's' : ''}
-                    </CardDescription>
+          {weekPlans.map((weekPlan) => {
+            const now = new Date();
+            const weekStart = parseISO(weekPlan.start_date);
+            const weekEnd = parseISO(weekPlan.end_date);
+            const isCurrentWeek = now >= weekStart && now <= weekEnd;
+            
+            return (
+              <Card key={weekPlan.id} className={isCurrentWeek ? 'border-primary border-2' : ''}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5" />
+                        {isCurrentWeek && (
+                          <Badge variant="default" className="mr-2">Semaine actuelle</Badge>
+                        )}
+                        Semaine du {format(parseISO(weekPlan.start_date), 'dd MMM', { locale: fr })} au{' '}
+                        {format(parseISO(weekPlan.end_date), 'dd MMM yyyy', { locale: fr })}
+                      </CardTitle>
+                      <CardDescription>
+                        {weekPlan.sessions.length} séance{weekPlan.sessions.length > 1 ? 's' : ''} planifiée{weekPlan.sessions.length > 1 ? 's' : ''}
+                      </CardDescription>
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
+                </CardHeader>
               <CardContent>
                 {weekPlan.sessions.length === 0 ? (
                   <p className="text-muted-foreground text-center py-4">
@@ -287,7 +315,8 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
                 )}
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 
