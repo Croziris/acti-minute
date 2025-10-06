@@ -2,67 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Design system pour Acti'Minute - Application de coaching sportif
-Palette : Deep Navy / Royal Blue / Light Gray
+/* Design system pour l'app de coaching sportif FitCoachSync
+Palette : Navy (navigation) / Royal Blue (primaire) / Gris clair (cartes)
 */
 
 @layer base {
   :root {
-    /* Couleurs principales Acti'Minute */
-    --deep-navy: 210 100% 12%;        /* #001F3F */
-    --royal-blue: 208 100% 43%;       /* #0074D9 */
-    --royal-blue-light: 208 100% 53%; /* hover +6% luminosité */
-    --royal-blue-dark: 208 100% 37%;  /* active -6% luminosité */
-    --light-gray: 200 20% 90%;        /* #D9E3E8 */
-    --dark-text: 218 64% 9%;          /* #0B1220 à 90% */
+    /* Couleurs principales */
+    --navy: 220 40% 15%;
+    --royal: 220 90% 50%;
+    --royal-light: 220 85% 60%;
+    --royal-dark: 220 95% 40%;
     
-    /* Greys harmonisés */
-    --grey-50: 200 20% 98%;
-    --grey-100: 200 18% 95%;
-    --grey-200: 200 15% 90%;  /* Light Gray principal */
-    --grey-300: 200 12% 80%;
-    --grey-400: 200 10% 65%;
-    --grey-500: 200 8% 50%;
-    --grey-600: 200 10% 35%;
-    --grey-700: 210 15% 25%;
-    --grey-800: 218 30% 15%;
-    --grey-900: 218 64% 9%;   /* Dark text */
+    /* Greys */
+    --grey-50: 220 20% 98%;
+    --grey-100: 220 15% 95%;
+    --grey-200: 220 10% 90%;
+    --grey-300: 220 8% 80%;
+    --grey-400: 220 6% 65%;
+    --grey-500: 220 5% 50%;
+    --grey-600: 220 6% 35%;
+    --grey-700: 220 8% 25%;
+    --grey-800: 220 10% 15%;
+    --grey-900: 220 15% 10%;
 
     /* Semantic colors */
-    --background: 0 0% 100%;
-    --foreground: var(--dark-text);
+    --background: var(--grey-50);
+    --foreground: var(--grey-900);
 
     --card: 0 0% 100%;
-    --card-foreground: var(--dark-text);
+    --card-foreground: var(--grey-900);
 
     --popover: 0 0% 100%;
-    --popover-foreground: var(--dark-text);
+    --popover-foreground: var(--grey-900);
 
-    --primary: var(--royal-blue);
+    --primary: var(--royal);
     --primary-foreground: 0 0% 100%;
 
-    --secondary: var(--light-gray);
-    --secondary-foreground: var(--deep-navy);
+    --secondary: var(--grey-100);
+    --secondary-foreground: var(--grey-800);
 
-    --muted: var(--light-gray);
-    --muted-foreground: var(--grey-600);
+    --muted: var(--grey-100);
+    --muted-foreground: var(--grey-500);
 
-    --accent: var(--royal-blue);
+    --accent: var(--royal-light);
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: var(--light-gray);
-    --input: var(--light-gray);
-    --ring: var(--royal-blue);
+    --border: var(--grey-200);
+    --input: var(--grey-200);
+    --ring: var(--royal);
 
     --radius: 0.75rem;
 
     /* Navigation colors */
-    --nav-background: var(--deep-navy);
+    --nav-background: var(--navy);
     --nav-foreground: 0 0% 100%;
-    --nav-active: var(--royal-blue);
+    --nav-active: var(--royal);
 
     /* Success & warning colors */
     --success: 140 70% 45%;
@@ -71,72 +69,63 @@ Palette : Deep Navy / Royal Blue / Light Gray
     --warning-foreground: 0 0% 100%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--royal-blue)), hsl(var(--royal-blue-light)));
-    --gradient-hero: linear-gradient(135deg, hsl(var(--deep-navy)), hsl(var(--royal-blue-dark)));
+    --gradient-primary: linear-gradient(135deg, hsl(var(--royal)), hsl(var(--royal-light)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--navy)), hsl(var(--royal-dark)));
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(var(--grey-50)));
 
-    /* Ombres premium */
-    --shadow-sm: 0 2px 4px 0 hsl(var(--grey-900) / 0.04);
-    --shadow-md: 0 6px 20px hsl(var(--grey-900) / 0.08);
-    --shadow-lg: 0 10px 30px hsl(var(--grey-900) / 0.12);
-    --shadow-xl: 0 20px 40px hsl(var(--grey-900) / 0.15);
-    --shadow-float: 0 10px 30px hsl(var(--grey-900) / 0.12);
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(var(--grey-900) / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(var(--grey-900) / 0.1), 0 2px 4px -1px hsl(var(--grey-900) / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(var(--grey-900) / 0.1), 0 4px 6px -2px hsl(var(--grey-900) / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(var(--grey-900) / 0.1), 0 10px 10px -5px hsl(var(--grey-900) / 0.04);
 
     /* Sidebar (utilisé pour navigation mobile) */
     --sidebar-background: var(--nav-background);
     --sidebar-foreground: var(--nav-foreground);
-    --sidebar-primary: var(--royal-blue);
+    --sidebar-primary: var(--royal);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: hsl(var(--royal-blue) / 0.1);
+    --sidebar-accent: hsl(var(--royal) / 0.1);
     --sidebar-accent-foreground: var(--nav-foreground);
-    --sidebar-border: hsl(var(--light-gray));
-    --sidebar-ring: var(--royal-blue);
-    
-    /* Frosted glass effect for floating toolbar */
-    --glass-bg-light: 255 255 255 / 0.7;
-    --glass-border-light: 217 227 232 / 0.6;
+    --sidebar-border: hsl(var(--grey-700));
+    --sidebar-ring: var(--royal);
   }
 
   .dark {
-    --background: 218 30% 8%;          /* #0F172A */
+    --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
 
-    --card: 218 30% 8%;
+    --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 218 30% 8%;
+    --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: var(--royal-blue);
-    --primary-foreground: 0 0% 100%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
 
-    --secondary: 218 25% 15%;
+    --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 218 25% 15%;
+    --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: var(--royal-blue);
-    --accent-foreground: 0 0% 100%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 218 25% 20%;
-    --input: 218 25% 20%;
-    --ring: var(--royal-blue);
-    --sidebar-background: var(--deep-navy);
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: var(--royal-blue);
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: hsl(var(--royal-blue) / 0.15);
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 218 25% 20%;
-    --sidebar-ring: var(--royal-blue);
-    
-    /* Frosted glass effect for floating toolbar dark mode */
-    --glass-bg-dark: 17 25 40 / 0.6;
-    --glass-border-dark: 217 227 232 / 0.2;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 

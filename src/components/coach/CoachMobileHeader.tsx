@@ -23,11 +23,8 @@ export const CoachMobileHeader = () => {
   };
 
   return (
-    <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-deep-navy text-white border-b border-white/10 flex items-center justify-between px-4 shadow-md">
-      <div className="flex items-center gap-2">
-        <img src="/logo-actiminute.png" alt="Acti'Minute" className="h-6 w-6" />
-        <h1 className="font-bold text-base">Acti'Minute</h1>
-      </div>
+    <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-nav text-nav-foreground border-b border-white/10 flex items-center justify-between px-4">
+      <h1 className="font-bold text-lg">FitCoachSync</h1>
       
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>

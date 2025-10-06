@@ -20,13 +20,11 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         
-        /* Couleurs principales Acti'Minute */
-        "deep-navy": "hsl(var(--deep-navy))",
-        "royal-blue": "hsl(var(--royal-blue))",
-        "royal-blue-light": "hsl(var(--royal-blue-light))",
-        "royal-blue-dark": "hsl(var(--royal-blue-dark))",
-        "light-gray": "hsl(var(--light-gray))",
-        "dark-text": "hsl(var(--dark-text))",
+        /* Couleurs principales du design system */
+        navy: "hsl(var(--navy))",
+        royal: "hsl(var(--royal))",
+        "royal-light": "hsl(var(--royal-light))",
+        "royal-dark": "hsl(var(--royal-dark))",
         
         /* Échelle de gris */
         grey: {
@@ -107,20 +105,11 @@ export default {
         md: "var(--shadow-md)",
         lg: "var(--shadow-lg)",
         xl: "var(--shadow-xl)",
-        card: "0 6px 20px rgba(0, 0, 0, 0.08)",
-        float: "0 10px 30px rgba(0, 0, 0, 0.12)",
       },
       borderRadius: {
-        lg: "12px",
-        md: "10px",
-        sm: "8px",
-        xl: "20px",
-      },
-      backdropBlur: {
-        glass: "12px",
-      },
-      backdropSaturate: {
-        glass: "140%",
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
       keyframes: {
         "accordion-down": {
