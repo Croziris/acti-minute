@@ -62,38 +62,20 @@ export const useWeeklyProgram = () => {
           return;
         }
 
-        // Try to get existing week plan for this program
-        // First try current week, then get the most recent or next available week plan
+        // Get the week plan for CURRENT week only
+        // We need to compare by start_date to handle year changes properly
+        const weekStart = getWeekStart(now).toISOString().split('T')[0];
+        const weekEnd = getWeekEnd(now).toISOString().split('T')[0];
+        
         let { data: weekPlanData, error: weekError } = await supabase
           .from('week_plan')
           .select('*')
           .eq('program_id', programData.id)
-          .eq('iso_week', currentISOWeek)
+          .eq('start_date', weekStart)
+          .eq('end_date', weekEnd)
           .maybeSingle();
 
         if (weekError) throw weekError;
-
-        // If no plan for current week, get the closest week plan (most recent or next upcoming)
-        if (!weekPlanData) {
-          const { data: allWeekPlans, error: allWeeksError } = await supabase
-            .from('week_plan')
-            .select('*')
-            .eq('program_id', programData.id)
-            .order('iso_week', { ascending: false })
-            .limit(10);
-
-          if (allWeeksError) throw allWeeksError;
-
-          if (allWeekPlans && allWeekPlans.length > 0) {
-            // Find closest week plan (prefer future weeks, then most recent past week)
-            const futureWeeks = allWeekPlans.filter(wp => wp.iso_week >= currentISOWeek);
-            const pastWeeks = allWeekPlans.filter(wp => wp.iso_week < currentISOWeek);
-            
-            weekPlanData = futureWeeks.length > 0 
-              ? futureWeeks[futureWeeks.length - 1] // Closest future week
-              : pastWeeks[0]; // Most recent past week
-          }
-        }
 
         if (!weekPlanData) {
           // No week plan found at all, create placeholder

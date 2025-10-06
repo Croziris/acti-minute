@@ -114,14 +114,31 @@ export const AssignWorkoutDialog: React.FC<Props> = ({
       setLoading(true);
 
       const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
-      const isoWeek = Math.ceil((weekStart.getTime() - new Date(weekStart.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000));
+      const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+      const weekEndStr = format(weekEnd, 'yyyy-MM-dd');
+      
+      // Calculer iso_week correctement
+      const getISOWeek = (date: Date): number => {
+        const target = new Date(date.valueOf());
+        const dayNumber = (date.getDay() + 6) % 7;
+        target.setDate(target.getDate() - dayNumber + 3);
+        const firstThursday = target.valueOf();
+        target.setMonth(0, 1);
+        if (target.getDay() !== 4) {
+          target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+        }
+        return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+      };
+      
+      const isoWeek = getISOWeek(weekStart);
 
-      // Vérifier si un week_plan existe déjà pour cette semaine ET ce programme
+      // Vérifier si un week_plan existe déjà en utilisant start_date et end_date
       let { data: weekPlan, error: weekPlanError } = await supabase
         .from('week_plan')
         .select('*')
         .eq('program_id', programId)
-        .eq('iso_week', isoWeek)
+        .eq('start_date', weekStartStr)
+        .eq('end_date', weekEndStr)
         .maybeSingle();
 
       if (weekPlanError) {
@@ -135,8 +152,8 @@ export const AssignWorkoutDialog: React.FC<Props> = ({
           .insert({
             program_id: programId,
             iso_week: isoWeek,
-            start_date: format(weekStart, 'yyyy-MM-dd'),
-            end_date: format(weekEnd, 'yyyy-MM-dd'),
+            start_date: weekStartStr,
+            end_date: weekEndStr,
             expected_sessions: 1
           })
           .select()
