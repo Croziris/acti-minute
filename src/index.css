@@ -40,11 +40,11 @@ Palette : Navy (navigation) / Royal Blue (primaire) / Gris clair (cartes)
     --primary: var(--royal);
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 30% 90%;
-    --secondary-foreground: 220 40% 20%;
+    --secondary: 215 35% 88%;
+    --secondary-foreground: 220 45% 18%;
 
-    --muted: 220 25% 92%;
-    --muted-foreground: 220 15% 45%;
+    --muted: 215 40% 90%;
+    --muted-foreground: 220 20% 40%;
 
     --accent: var(--royal-light);
     --accent-foreground: 0 0% 100%;
@@ -52,8 +52,8 @@ Palette : Navy (navigation) / Royal Blue (primaire) / Gris clair (cartes)
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 30% 85%;
-    --input: 220 25% 88%;
+    --border: 215 35% 82%;
+    --input: 215 35% 85%;
     --ring: var(--royal);
 
     --radius: 0.75rem;
