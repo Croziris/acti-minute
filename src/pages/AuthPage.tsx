@@ -88,10 +88,10 @@ const AuthPage = () => {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <div className="p-3 bg-white rounded-xl shadow-lg">
-              <Dumbbell className="h-8 w-8 text-primary" />
+              <img src="/Logo ActiMinute.png" alt="Acti-Minute" className="h-12 w-12" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">FitCoachSync</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Acti-Minute</h1>
           <p className="text-royal-light">Votre coach sportif digital</p>
         </div>
 
