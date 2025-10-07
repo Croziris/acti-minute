@@ -28,13 +28,13 @@ Palette : Navy (navigation) / Royal Blue (primaire) / Gris clair (cartes)
     --grey-900: 220 15% 10%;
 
     /* Semantic colors */
-    --background: var(--grey-50);
+    --background: var(--cream);
     --foreground: var(--grey-900);
 
-    --card: 0 0% 100%;
+    --card: var(--cream);
     --card-foreground: var(--grey-900);
 
-    --popover: 0 0% 100%;
+    --popover: var(--cream);
     --popover-foreground: var(--grey-900);
 
     --primary: var(--royal);
