@@ -49,7 +49,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
       </main>
 
       {/* Navigation bottom - Frosted glass effect */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-cream/80 backdrop-blur-xl border-t border-border/30 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-xl border-t border-border/40 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
         <div className="flex items-center justify-around py-3 px-2 safe-area-inset-bottom">
           <Button
             variant="ghost"

@@ -13,7 +13,7 @@ Palette : Navy (navigation) / Royal Blue (primaire) / Gris clair (cartes)
     --royal: 220 90% 50%;
     --royal-light: 220 85% 60%;
     --royal-dark: 220 95% 40%;
-    --cream: 40 50% 95%;
+    --blue-pale: 215 45% 97%;
     
     /* Greys */
     --grey-50: 220 20% 98%;
@@ -28,23 +28,23 @@ Palette : Navy (navigation) / Royal Blue (primaire) / Gris clair (cartes)
     --grey-900: 220 15% 10%;
 
     /* Semantic colors */
-    --background: var(--cream);
-    --foreground: var(--grey-900);
+    --background: var(--blue-pale);
+    --foreground: 220 30% 15%;
 
-    --card: var(--cream);
-    --card-foreground: var(--grey-900);
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 15%;
 
-    --popover: var(--cream);
-    --popover-foreground: var(--grey-900);
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 15%;
 
     --primary: var(--royal);
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 35% 88%;
-    --secondary-foreground: 220 45% 18%;
+    --secondary: 215 35% 92%;
+    --secondary-foreground: 220 35% 20%;
 
-    --muted: 215 40% 90%;
-    --muted-foreground: 220 20% 40%;
+    --muted: 215 30% 94%;
+    --muted-foreground: 220 15% 45%;
 
     --accent: var(--royal-light);
     --accent-foreground: 0 0% 100%;
@@ -52,8 +52,8 @@ Palette : Navy (navigation) / Royal Blue (primaire) / Gris clair (cartes)
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 215 35% 82%;
-    --input: 215 35% 85%;
+    --border: 215 25% 88%;
+    --input: 215 30% 90%;
     --ring: var(--royal);
 
     --radius: 0.75rem;
