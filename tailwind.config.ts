@@ -25,6 +25,7 @@ export default {
         royal: "hsl(var(--royal))",
         "royal-light": "hsl(var(--royal-light))",
         "royal-dark": "hsl(var(--royal-dark))",
+        cream: "hsl(var(--cream))",
         
         /* Échelle de gris */
         grey: {

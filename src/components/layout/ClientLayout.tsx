@@ -48,43 +48,43 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
         {children}
       </main>
 
-      {/* Navigation bottom */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-border shadow-lg">
-        <div className="flex items-center justify-around py-2">
+      {/* Navigation bottom - Frosted glass effect */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-cream/80 backdrop-blur-xl border-t border-border/30 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        <div className="flex items-center justify-around py-3 px-2 safe-area-inset-bottom">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate('/client/home')}
-            className={`flex flex-col items-center space-y-1 px-4 py-3 ${
+            className={`flex flex-col items-center gap-1 px-3 py-2 h-auto min-h-[56px] rounded-xl transition-all duration-200 hover:bg-primary/5 ${
               isActive('/client/home') ? 'text-primary' : 'text-muted-foreground'
             }`}
           >
-            <Home className="h-5 w-5" />
-            <span className="text-xs">Accueil</span>
+            <Home className="h-6 w-6 shrink-0" />
+            <span className="text-xs font-medium">Accueil</span>
           </Button>
 
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate('/client/habits')}
-            className={`flex flex-col items-center space-y-1 px-4 py-3 ${
+            className={`flex flex-col items-center gap-1 px-3 py-2 h-auto min-h-[56px] rounded-xl transition-all duration-200 hover:bg-primary/5 ${
               isActive('/client/habits') ? 'text-primary' : 'text-muted-foreground'
             }`}
           >
-            <Calendar className="h-5 w-5" />
-            <span className="text-xs">Habitudes</span>
+            <Calendar className="h-6 w-6 shrink-0" />
+            <span className="text-xs font-medium">Habitudes</span>
           </Button>
 
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate('/client/articles')}
-            className={`flex flex-col items-center space-y-1 px-4 py-3 ${
+            className={`flex flex-col items-center gap-1 px-3 py-2 h-auto min-h-[56px] rounded-xl transition-all duration-200 hover:bg-primary/5 ${
               isActive('/client/articles') ? 'text-primary' : 'text-muted-foreground'
             }`}
           >
-            <BookOpen className="h-5 w-5" />
-            <span className="text-xs">Articles</span>
+            <BookOpen className="h-6 w-6 shrink-0" />
+            <span className="text-xs font-medium">Articles</span>
           </Button>
         </div>
       </nav>
