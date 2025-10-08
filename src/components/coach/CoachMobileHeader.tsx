@@ -25,7 +25,7 @@ export const CoachMobileHeader = () => {
   return (
     <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-nav text-nav-foreground border-b border-white/10 flex items-center justify-between px-4">
       <div className="flex items-center space-x-2">
-        <img src="/Logo ActiMinute.png" alt="Acti'Minute" className="h-8 w-8" />
+        <img src="/logo-actiminute.png" alt="Acti'Minute" className="h-8 w-8" />
         <h1 className="font-bold text-lg">Acti'Minute</h1>
       </div>
       

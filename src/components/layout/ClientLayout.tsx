@@ -27,7 +27,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
       {/* Header mobile */}
       <header className="bg-nav text-nav-foreground p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <img src="/Logo ActiMinute.png" alt="Acti'Minute" className="h-8 w-8" />
+          <img src="/logo-actiminute.png" alt="Acti'Minute" className="h-8 w-8" />
           <div>
             <h1 className="font-semibold">Acti'Minute</h1>
             <p className="text-sm opacity-75">Bonjour {user?.handle || 'Sportif.ve'}</p>
