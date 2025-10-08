@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { InstallPWA } from "@/components/InstallPWA";
 import AuthPage from "@/pages/AuthPage";
 import ClientHome from "@/pages/client/ClientHome";
 import ClientSession from "@/pages/client/ClientSession";
@@ -27,6 +28,7 @@ const App = () => (
       <AuthProvider>
         <Toaster />
         <Sonner />
+        <InstallPWA />
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<AuthPage />} />

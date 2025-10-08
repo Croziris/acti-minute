@@ -71,3 +71,55 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Progressive Web App (PWA)
+
+Cette application est une PWA complète, ce qui signifie qu'elle peut être installée sur les appareils mobiles et de bureau pour une expérience native.
+
+### Fonctionnalités PWA
+
+- **Installation sur l'écran d'accueil** : Les utilisateurs peuvent installer l'application directement depuis leur navigateur
+- **Mode hors ligne** : L'application fonctionne même sans connexion Internet grâce au Service Worker
+- **Mise en cache intelligente** : Les ressources sont mises en cache pour un chargement ultra-rapide
+- **Expérience native** : L'application s'affiche en plein écran sans les barres de navigateur
+- **Icônes optimisées** : Icônes adaptées à tous les appareils (192x192 et 512x512)
+
+### Tester la PWA localement
+
+1. **Build de production** :
+   ```sh
+   npm run build
+   npm run preview
+   ```
+
+2. **Vérifier avec Lighthouse** :
+   - Ouvrez Chrome DevTools (F12)
+   - Allez dans l'onglet "Lighthouse"
+   - Sélectionnez "Progressive Web App"
+   - Cliquez sur "Analyze page load"
+   - Visez un score > 90
+
+3. **Tester l'installation** :
+   - Dans Chrome, cliquez sur l'icône d'installation dans la barre d'adresse
+   - Ou utilisez le menu : Plus d'outils > Installer l'application
+   - Une bannière d'installation apparaîtra automatiquement
+
+4. **Tester le mode hors ligne** :
+   - Installez l'application
+   - Dans Chrome DevTools, allez dans "Network"
+   - Cochez "Offline"
+   - Naviguez dans l'application - elle devrait continuer à fonctionner
+   - La page `/offline.html` s'affichera pour les pages non mises en cache
+
+### Fichiers PWA
+
+- **`public/manifest.webmanifest`** : Manifeste de l'application web
+- **`public/sw.js`** : Service Worker avec stratégies de cache
+- **`public/offline.html`** : Page de fallback hors ligne
+- **`public/icons/`** : Icônes de l'application
+- **`src/lib/register-sw.ts`** : Utilitaire d'enregistrement du Service Worker
+- **`src/components/InstallPWA.tsx`** : Composant de prompt d'installation
+
+### Déploiement PWA
+
+Lorsque vous déployez via Lovable (Share > Publish), la PWA sera automatiquement activée et les utilisateurs pourront l'installer directement depuis votre URL de production.
