@@ -53,8 +53,8 @@ export const useWeeklyProgram = () => {
           setWeekPlan({
             id: '',
             iso_week: currentISOWeek,
-            start_date: getWeekStart(now).toISOString().split('T')[0],
-            end_date: getWeekEnd(now).toISOString().split('T')[0],
+            start_date: formatDateLocal(getWeekStart(now)),
+            end_date: formatDateLocal(getWeekEnd(now)),
             expected_sessions: 0,
             sessions: []
           });
@@ -64,8 +64,8 @@ export const useWeeklyProgram = () => {
 
         // Get the week plan for CURRENT week only
         // We need to compare by start_date to handle year changes properly
-        const weekStart = getWeekStart(now).toISOString().split('T')[0];
-        const weekEnd = getWeekEnd(now).toISOString().split('T')[0];
+        const weekStart = formatDateLocal(getWeekStart(now));
+        const weekEnd = formatDateLocal(getWeekEnd(now));
         
         let { data: weekPlanData, error: weekError } = await supabase
           .from('week_plan')
@@ -82,8 +82,8 @@ export const useWeeklyProgram = () => {
           setWeekPlan({
             id: '',
             iso_week: currentISOWeek,
-            start_date: getWeekStart(now).toISOString().split('T')[0],
-            end_date: getWeekEnd(now).toISOString().split('T')[0],
+            start_date: formatDateLocal(getWeekStart(now)),
+            end_date: formatDateLocal(getWeekEnd(now)),
             expected_sessions: 0,
             sessions: []
           });
@@ -146,6 +146,7 @@ function getISOWeek(date: Date): number {
 
 function getWeekStart(date: Date): Date {
   const result = new Date(date);
+  result.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
   const day = result.getDay();
   const diff = result.getDate() - day + (day === 0 ? -6 : 1);
   result.setDate(diff);
@@ -156,4 +157,12 @@ function getWeekEnd(date: Date): Date {
   const result = getWeekStart(date);
   result.setDate(result.getDate() + 6);
   return result;
+}
+
+// Format date without timezone conversion
+function formatDateLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
