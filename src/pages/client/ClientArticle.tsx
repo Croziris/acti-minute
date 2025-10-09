@@ -16,13 +16,9 @@ const ClientArticle = () => {
   const { data: article, isLoading, error } = useQuery({
     queryKey: ['article', slug],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('article')
-        .select('*')
-        .eq('slug', slug)
-        .not('published_at', 'is', null)
-        .lte('published_at', new Date().toISOString())
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke('get-notion-article', {
+        body: { slug }
+      });
       
       if (error) {
         console.error('Erreur récupération article:', error);
