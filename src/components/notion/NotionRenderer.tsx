@@ -27,6 +27,31 @@ interface NotionRendererProps {
   blocks?: NotionBlock[];
 }
 
+const getColorClass = (color: string): string => {
+  const colorMap: Record<string, string> = {
+    default: '',
+    gray: 'text-muted-foreground',
+    brown: 'text-amber-700 dark:text-amber-400',
+    orange: 'text-orange-600 dark:text-orange-400',
+    yellow: 'text-yellow-600 dark:text-yellow-400',
+    green: 'text-green-600 dark:text-green-400',
+    blue: 'text-blue-600 dark:text-blue-400',
+    purple: 'text-purple-600 dark:text-purple-400',
+    pink: 'text-pink-600 dark:text-pink-400',
+    red: 'text-red-600 dark:text-red-400',
+    gray_background: 'bg-muted px-1.5 py-0.5 rounded',
+    brown_background: 'bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded',
+    orange_background: 'bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 rounded',
+    yellow_background: 'bg-yellow-100 dark:bg-yellow-900/30 px-1.5 py-0.5 rounded',
+    green_background: 'bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded',
+    blue_background: 'bg-blue-100 dark:bg-blue-900/30 px-1.5 py-0.5 rounded',
+    purple_background: 'bg-purple-100 dark:bg-purple-900/30 px-1.5 py-0.5 rounded',
+    pink_background: 'bg-pink-100 dark:bg-pink-900/30 px-1.5 py-0.5 rounded',
+    red_background: 'bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded',
+  };
+  return colorMap[color] || '';
+};
+
 const RichTextRenderer: React.FC<{ richText: RichText[] }> = ({ richText }) => {
   return (
     <>
@@ -38,6 +63,11 @@ const RichTextRenderer: React.FC<{ richText: RichText[] }> = ({ richText }) => {
         if (rt.annotations.italic) className += ' italic';
         if (rt.annotations.strikethrough) className += ' line-through';
         if (rt.annotations.underline) className += ' underline';
+        
+        // Add color class
+        const colorClass = getColorClass(rt.annotations.color);
+        if (colorClass) className += ` ${colorClass}`;
+        
         if (rt.annotations.code) {
           return (
             <code key={idx} className="px-1.5 py-0.5 rounded bg-muted font-mono text-sm">
