@@ -10,7 +10,7 @@ interface RichText {
     code: boolean;
     color: string;
   };
-  href?: string;
+  href?: string | null;
 }
 
 interface NotionBlock {
@@ -18,13 +18,13 @@ interface NotionBlock {
   type: string;
   rich_text?: RichText[];
   image?: {
-    url: string;
-    caption: string;
+    url?: string;
+    caption?: string;
   };
 }
 
 interface NotionRendererProps {
-  blocks: NotionBlock[];
+  blocks?: NotionBlock[];
 }
 
 const RichTextRenderer: React.FC<{ richText: RichText[] }> = ({ richText }) => {
@@ -72,7 +72,7 @@ const RichTextRenderer: React.FC<{ richText: RichText[] }> = ({ richText }) => {
   );
 };
 
-export const NotionRenderer: React.FC<NotionRendererProps> = ({ blocks }) => {
+export const NotionRenderer: React.FC<NotionRendererProps> = ({ blocks = [] }) => {
   if (!blocks || blocks.length === 0) {
     return <p className="text-muted-foreground">Aucun contenu disponible.</p>;
   }
@@ -150,14 +150,15 @@ export const NotionRenderer: React.FC<NotionRendererProps> = ({ blocks }) => {
             return <hr key={block.id} className="my-8 border-border" />;
 
           case 'image':
+            if (!block.image?.url) return null;
             return (
               <figure key={block.id} className="my-6">
                 <img
-                  src={block.image?.url}
-                  alt={block.image?.caption || ''}
+                  src={block.image.url}
+                  alt={block.image.caption || ''}
                   className="w-full rounded-lg"
                 />
-                {block.image?.caption && (
+                {block.image.caption && (
                   <figcaption className="text-sm text-muted-foreground text-center mt-2">
                     {block.image.caption}
                   </figcaption>

@@ -124,9 +124,16 @@ serve(async (req) => {
       const blockType = block[block.type];
       if (blockType?.rich_text) {
         blockData.rich_text = blockType.rich_text.map((rt: any) => ({
-          text: rt.plain_text,
-          annotations: rt.annotations,
-          href: rt.href,
+          text: rt.plain_text || '',
+          annotations: {
+            bold: rt.annotations?.bold || false,
+            italic: rt.annotations?.italic || false,
+            strikethrough: rt.annotations?.strikethrough || false,
+            underline: rt.annotations?.underline || false,
+            code: rt.annotations?.code || false,
+            color: rt.annotations?.color || 'default'
+          },
+          href: rt.href || null,
         }));
       }
 
@@ -161,8 +168,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error fetching Notion article:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
