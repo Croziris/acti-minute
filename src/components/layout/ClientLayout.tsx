@@ -30,7 +30,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
           <img src="/logo-actiminute.png" alt="Acti'Minute" className="h-8 w-8" />
           <div>
             <h1 className="font-semibold">Acti'Minute</h1>
-            <p className="text-sm opacity-75">Bonjour {user?.handle || 'Sportif.ve'}</p>
+            <p className="text-sm opacity-75">Bonjour {user?.handle || 'Sportif⸱ve'}</p>
           </div>
         </div>
         <Button

@@ -62,7 +62,7 @@ const AuthPage = () => {
     } else {
       toast({
         title: "Connexion réussie",
-        description: `Bienvenue ${selectedRole === 'spotif.ve' ? 'Sportif.ve' : 'Coach'} !`,
+        description: `Bienvenue ${selectedRole === 'spotif.ve' ? 'Sportif⸱ve' : 'Coach'} !`,
       });
     }
     setIsSubmitting(false);
@@ -98,7 +98,7 @@ const AuthPage = () => {
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">
-              {!selectedRole ? 'Qui êtes-vous ?' : `Connexion ${selectedRole === 'spotif.ve' ? 'Sportif.ve' : 'Coach'}`}
+              {!selectedRole ? 'Qui êtes-vous ?' : `Connexion ${selectedRole === 'spotif.ve' ? 'Sportif⸱ve' : 'Coach'}`}
             </CardTitle>
             <CardDescription>
               {!selectedRole 
@@ -120,7 +120,7 @@ const AuthPage = () => {
                       <User className="h-6 w-6" />
                     </div>
                     <div>
-                      <div className="font-semibold">Sportif.ve</div>
+                      <div className="font-semibold">Sportif⸱ve</div>
                       <div className="text-sm opacity-90">Accéder à mon programme</div>
                     </div>
                   </div>

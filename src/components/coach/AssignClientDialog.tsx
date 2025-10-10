@@ -58,7 +58,7 @@ export const AssignClientDialog: React.FC<Props> = ({ open, onOpenChange, onSucc
     try {
       setLoading(true);
       
-      // Récupérer tous les sportif.ve
+      // Récupérer tous les sportif⸱ve
       const { data: allClients, error: clientsError } = await supabase
         .from('app_user')
         .select('id, handle, avatar_url')
