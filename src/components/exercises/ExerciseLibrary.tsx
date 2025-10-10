@@ -13,6 +13,7 @@ import { EditExerciseDialog } from './EditExerciseDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { extractYouTubeVideoId, isYouTubeShort, getYouTubeEmbedUrl } from '@/lib/utils';
 
 interface Exercise {
   id: string;
@@ -127,12 +128,6 @@ export const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
     setFilteredExercises(filtered);
   };
 
-  const extractYouTubeVideoId = (url: string): string | null => {
-    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-    const match = url.match(regex);
-    return match ? match[1] : null;
-  };
-
   const handleAddExercise = async () => {
     if (!newExercise.libelle || !user) return;
 
@@ -188,10 +183,6 @@ export const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
         variant: "destructive",
       });
     }
-  };
-
-  const getYouTubeEmbedUrl = (videoId: string) => {
-    return `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`;
   };
 
   const toggleArrayItem = (array: string[], item: string, setter: (arr: string[]) => void) => {
@@ -510,11 +501,12 @@ export const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({
                           <DialogHeader>
                             <DialogTitle>{exercise.libelle}</DialogTitle>
                           </DialogHeader>
-                          <div className="aspect-video">
+                          <div className={isYouTubeShort(exercise.youtube_url || '') ? "flex justify-center" : "aspect-video"}>
                             <iframe
-                              src={getYouTubeEmbedUrl(exercise.video_id)}
+                              src={getYouTubeEmbedUrl(exercise.video_id, isYouTubeShort(exercise.youtube_url || ''))}
                               title={exercise.libelle}
-                              className="w-full h-full rounded-lg"
+                              className={isYouTubeShort(exercise.youtube_url || '') ? "w-full max-w-[360px] h-[640px] rounded-lg" : "w-full h-full rounded-lg"}
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                               allowFullScreen
                             />
                           </div>

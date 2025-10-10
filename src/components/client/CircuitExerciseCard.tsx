@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Play } from 'lucide-react';
+import { getYouTubeEmbedUrl, isYouTubeShort } from '@/lib/utils';
 
 interface Exercise {
   exercise_id: string;
@@ -30,11 +31,7 @@ interface CircuitExerciseCardProps {
 
 export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({ exercise: we, index }) => {
   const [showVideo, setShowVideo] = useState(false);
-
-  const getYouTubeEmbedUrl = () => {
-    if (!we.exercise.video_id) return null;
-    return `https://www.youtube-nocookie.com/embed/${we.exercise.video_id}?rel=0&modestbranding=1`;
-  };
+  const isShort = we.exercise?.youtube_url ? isYouTubeShort(we.exercise.youtube_url) : false;
 
   return (
     <Card className="w-full">
@@ -83,11 +80,12 @@ export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({ exerci
       <CardContent className="space-y-4">
         {/* Video Player */}
         {showVideo && we.exercise.video_id && (
-          <div className="aspect-video w-full">
+          <div className={isShort ? "flex justify-center" : "aspect-video w-full"}>
             <iframe
-              src={getYouTubeEmbedUrl()!}
+              src={getYouTubeEmbedUrl(we.exercise.video_id, isShort)}
               title={we.exercise.libelle}
-              className="w-full h-full rounded-lg"
+              className={isShort ? "w-full max-w-[360px] h-[640px] rounded-lg" : "w-full h-full rounded-lg"}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             />
           </div>

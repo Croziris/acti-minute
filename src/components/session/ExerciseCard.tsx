@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Play, Plus, Minus, Star } from 'lucide-react';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { getYouTubeEmbedUrl, isYouTubeShort } from '@/lib/utils';
 
 interface ExerciseCardProps {
   exercise: {
@@ -98,10 +99,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     setShowFeedback(false);
   };
 
-  const getYouTubeEmbedUrl = () => {
-    if (!exercise.video_id) return null;
-    return `https://www.youtube-nocookie.com/embed/${exercise.video_id}?rel=0&modestbranding=1`;
-  };
+  const isShort = exercise.youtube_url ? isYouTubeShort(exercise.youtube_url) : false;
 
   return (
     <Card className="w-full">
@@ -152,11 +150,12 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       <CardContent className="space-y-4">
         {/* Video Player */}
         {showVideo && exercise.video_id && (
-          <div className="aspect-video w-full">
+          <div className={isShort ? "flex justify-center" : "aspect-video w-full"}>
             <iframe
-              src={getYouTubeEmbedUrl()!}
+              src={getYouTubeEmbedUrl(exercise.video_id, isShort)}
               title={exercise.libelle}
-              className="w-full h-full rounded-lg"
+              className={isShort ? "w-full max-w-[360px] h-[640px] rounded-lg" : "w-full h-full rounded-lg"}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             />
           </div>

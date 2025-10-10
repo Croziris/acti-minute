@@ -71,11 +71,11 @@ serve(async (req) => {
       );
     }
 
-    // Extraire video_id depuis YouTube URL
+    // Extraire video_id depuis YouTube URL (support standard et shorts)
     let video_id = '';
     if (youtube_url) {
       console.log('🎥 Extracting YouTube video ID...');
-      const youtubeRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/;
+      const youtubeRegex = /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([^&\s]+)/;
       const match = youtube_url.match(youtubeRegex);
       if (!match) {
         console.log('❌ Invalid YouTube URL');
