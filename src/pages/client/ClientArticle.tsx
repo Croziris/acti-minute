@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Calendar, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { NotionRenderer } from '@/components/notion/NotionRenderer';
 
 const ClientArticle = () => {
   const { slug } = useParams();
@@ -127,17 +128,7 @@ const ClientArticle = () => {
 
         <Card>
           <CardContent className="pt-6">
-            <div className="prose prose-slate max-w-none">
-              {article.contenu?.split('\n').map((paragraph, idx) => (
-                paragraph.trim() ? (
-                  <p key={idx} className="mb-4 text-foreground leading-relaxed">
-                    {paragraph}
-                  </p>
-                ) : (
-                  <br key={idx} />
-                )
-              ))}
-            </div>
+            <NotionRenderer blocks={article.blocks || []} />
           </CardContent>
         </Card>
       </article>

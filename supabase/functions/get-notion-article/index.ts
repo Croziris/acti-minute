@@ -113,26 +113,35 @@ serve(async (req) => {
 
     const blocksData = await blocksResponse.json();
 
-    // Convertir les blocks Notion en texte simple
-    const contenu = blocksData.results
-      .map((block: NotionBlock) => {
-        if (block.type === 'paragraph') {
-          return block.paragraph?.rich_text?.map((rt: any) => rt.plain_text).join('') || '';
-        } else if (block.type === 'heading_1') {
-          return `# ${block.heading_1?.rich_text?.map((rt: any) => rt.plain_text).join('') || ''}`;
-        } else if (block.type === 'heading_2') {
-          return `## ${block.heading_2?.rich_text?.map((rt: any) => rt.plain_text).join('') || ''}`;
-        } else if (block.type === 'heading_3') {
-          return `### ${block.heading_3?.rich_text?.map((rt: any) => rt.plain_text).join('') || ''}`;
-        } else if (block.type === 'bulleted_list_item') {
-          return `• ${block.bulleted_list_item?.rich_text?.map((rt: any) => rt.plain_text).join('') || ''}`;
-        } else if (block.type === 'numbered_list_item') {
-          return `${block.numbered_list_item?.rich_text?.map((rt: any) => rt.plain_text).join('') || ''}`;
-        }
-        return '';
-      })
-      .filter((text: string) => text.length > 0)
-      .join('\n\n');
+    // Renvoyer les blocks structurés avec leur formatage complet
+    const blocks = blocksData.results.map((block: NotionBlock) => {
+      const blockData: any = {
+        id: block.id,
+        type: block.type,
+      };
+
+      // Extraire les rich_text avec formatage pour chaque type de block
+      const blockType = block[block.type];
+      if (blockType?.rich_text) {
+        blockData.rich_text = blockType.rich_text.map((rt: any) => ({
+          text: rt.plain_text,
+          annotations: rt.annotations,
+          href: rt.href,
+        }));
+      }
+
+      // Gérer les images
+      if (block.type === 'image') {
+        blockData.image = {
+          url: block.image?.type === 'external' 
+            ? block.image.external?.url 
+            : block.image?.file?.url,
+          caption: block.image?.caption?.map((c: any) => c.plain_text).join('') || '',
+        };
+      }
+
+      return blockData;
+    });
 
     const article = {
       id: page.id,
@@ -143,7 +152,7 @@ serve(async (req) => {
       published_at,
       categories,
       cover_url,
-      contenu,
+      blocks,
     };
 
     return new Response(JSON.stringify(article), {
