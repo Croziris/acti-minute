@@ -88,7 +88,7 @@ const AuthPage = () => {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <div className="p-3 bg-white rounded-xl shadow-lg">
-              <img src="/Logo ActiMinute.png" alt="Acti'Minute" className="h-12 w-12" />
+              <img src="/logo-actiminute.png" alt="Acti'Minute" className="h-12 w-12" />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">Acti'Minute</h1>
