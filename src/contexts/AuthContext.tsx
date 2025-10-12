@@ -32,8 +32,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     // Fonction pour mettre à jour l'utilisateur depuis la session
     const updateUserFromSession = async (session: any) => {
+      if (!mounted) return;
+      
       if (session?.user) {
         const appUserId = session.user.user_metadata?.app_user_id;
         
@@ -44,7 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .eq('id', appUserId)
             .single();
           
-          if (appUser) {
+          if (appUser && mounted) {
             const userData = {
               id: appUser.id,
               role: appUser.role as UserRole,
@@ -56,30 +60,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       } else {
-        setUser(null);
-        localStorage.removeItem('auth_user');
+        if (mounted) {
+          setUser(null);
+          localStorage.removeItem('auth_user');
+        }
       }
     };
 
-    // Écouter les changements d'état d'authentification
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    // Vérifier la session existante au démarrage
+    const initSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         await updateUserFromSession(session);
-        if (event === 'SIGNED_OUT') {
+      } catch (error) {
+        console.error('Error loading session:', error);
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    // Écouter les changements d'état d'authentification (pour les futures connexions/déconnexions)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          updateUserFromSession(session);
+        } else if (event === 'SIGNED_OUT') {
           setUser(null);
           localStorage.removeItem('auth_user');
         }
       }
     );
 
-    // Vérifier la session existante au démarrage
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      updateUserFromSession(session).finally(() => {
-        setIsLoading(false);
-      });
-    });
+    initSession();
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
