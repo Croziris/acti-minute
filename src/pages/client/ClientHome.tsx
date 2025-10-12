@@ -110,7 +110,7 @@ const ClientHome = () => {
                   <p className="text-sm text-muted-foreground">Cette semaine</p>
                   <p className="text-xl font-bold">
                     {weekPlan ? 
-                      `${weekPlan.sessions.filter(s => s.statut === 'done').length}/${weekPlan.expected_sessions}` 
+                      `${weekPlan.sessions.filter(s => s.statut === 'done').length}/${weekPlan.sessions.length}` 
                       : '0/0'
                     }
                   </p>
