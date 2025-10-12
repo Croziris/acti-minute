@@ -131,7 +131,7 @@ export const useWeeklyProgram = () => {
   return { weekPlan, loading, error, refetch: () => setLoading(true) };
 };
 
-// Helper functions for ISO week calculations
+// Helper functions for ISO week calculations (French week: Monday to Sunday)
 function getISOWeek(date: Date): number {
   const target = new Date(date.valueOf());
   const dayNumber = (date.getDay() + 6) % 7;
@@ -144,15 +144,20 @@ function getISOWeek(date: Date): number {
   return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
 }
 
+// Get Monday (start of week in French system)
 function getWeekStart(date: Date): Date {
   const result = new Date(date);
   result.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
   const day = result.getDay();
+  // For Sunday (0), go back 6 days to Monday
+  // For Monday (1), stay on the same day
+  // For other days, go back to the previous Monday
   const diff = result.getDate() - day + (day === 0 ? -6 : 1);
   result.setDate(diff);
   return result;
 }
 
+// Get Sunday (end of week in French system)
 function getWeekEnd(date: Date): Date {
   const result = getWeekStart(date);
   result.setDate(result.getDate() + 6);

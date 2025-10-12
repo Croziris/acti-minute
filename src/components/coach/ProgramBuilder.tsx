@@ -108,12 +108,18 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
       }));
 
       // Trier les semaines : semaine actuelle en premier, puis futures, puis passées
+      // Normaliser la date actuelle à minuit pour comparer correctement avec les dates de début/fin
       const now = new Date();
+      now.setHours(0, 0, 0, 0);
       const sorted = organized.sort((a, b) => {
         const aStart = parseISO(a.start_date);
+        aStart.setHours(0, 0, 0, 0);
         const aEnd = parseISO(a.end_date);
+        aEnd.setHours(23, 59, 59, 999);
         const bStart = parseISO(b.start_date);
+        bStart.setHours(0, 0, 0, 0);
         const bEnd = parseISO(b.end_date);
+        bEnd.setHours(23, 59, 59, 999);
         
         const aIsCurrent = now >= aStart && now <= aEnd;
         const bIsCurrent = now >= bStart && now <= bEnd;
@@ -223,8 +229,11 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
         <div className="space-y-6">
           {weekPlans.map((weekPlan) => {
             const now = new Date();
+            now.setHours(0, 0, 0, 0);
             const weekStart = parseISO(weekPlan.start_date);
+            weekStart.setHours(0, 0, 0, 0);
             const weekEnd = parseISO(weekPlan.end_date);
+            weekEnd.setHours(23, 59, 59, 999);
             const isCurrentWeek = now >= weekStart && now <= weekEnd;
             
             return (
