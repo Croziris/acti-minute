@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Play, Plus, Minus, Star } from 'lucide-react';
+import { Play, Plus, Minus, Star, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { getYouTubeEmbedUrl, isYouTubeShort } from '@/lib/utils';
 
@@ -260,7 +261,25 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           </div>
 
           <div>
-            <label className="text-sm font-medium">RPE (1-10)</label>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">RPE (1-10)</label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center justify-center w-4 h-4 rounded-full bg-muted cursor-help">
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="font-semibold mb-1">Échelle de Perception d'Effort</p>
+                    <p className="text-xs">De 1 à 10 :</p>
+                    <p className="text-xs">• 1 : Sans effort, pas d'augmentation de la fréquence cardiaque</p>
+                    <p className="text-xs">• 5 : Activité physique légère à modérée</p>
+                    <p className="text-xs">• 10 : Effort maximal endurable</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <div className="flex items-center space-x-1 mt-2">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(rating => (
                 <Button
