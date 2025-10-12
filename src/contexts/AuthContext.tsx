@@ -32,15 +32,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Vérifier la session Supabase d'abord
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    // Fonction pour mettre à jour l'utilisateur depuis la session
+    const updateUserFromSession = async (session: any) => {
       if (session?.user) {
-        // Récupérer l'app_user_id depuis les métadonnées du JWT
         const appUserId = session.user.user_metadata?.app_user_id;
         
         if (appUserId) {
-          // Récupérer les infos complètes de l'utilisateur depuis app_user
           const { data: appUser } = await supabase
             .from('app_user')
             .select('*')
@@ -48,35 +45,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .single();
           
           if (appUser) {
-            setUser({
+            const userData = {
               id: appUser.id,
               role: appUser.role as UserRole,
               handle: appUser.handle || undefined,
               avatar_url: appUser.avatar_url || undefined,
-            });
-            localStorage.setItem('auth_user', JSON.stringify({
-              id: appUser.id,
-              role: appUser.role,
-              handle: appUser.handle,
-              avatar_url: appUser.avatar_url,
-            }));
+            };
+            setUser(userData);
+            localStorage.setItem('auth_user', JSON.stringify(userData));
           }
         }
       } else {
-        // Sinon vérifier le local storage
-        const storedUser = localStorage.getItem('auth_user');
-        if (storedUser) {
-          try {
-            setUser(JSON.parse(storedUser));
-          } catch (error) {
-            localStorage.removeItem('auth_user');
-          }
-        }
+        setUser(null);
+        localStorage.removeItem('auth_user');
       }
-      setIsLoading(false);
     };
 
-    checkSession();
+    // Écouter les changements d'état d'authentification
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        await updateUserFromSession(session);
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+          localStorage.removeItem('auth_user');
+        }
+      }
+    );
+
+    // Vérifier la session existante au démarrage
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      updateUserFromSession(session).finally(() => {
+        setIsLoading(false);
+      });
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (role: UserRole, username: string, accessKey: string) => {
