@@ -9,6 +9,16 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClientHabitsTracker } from './ClientHabitsTracker';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Habit {
   id: string;
@@ -31,6 +41,8 @@ export const HabitManager: React.FC<Props> = ({ clientId }) => {
   const [showNewHabit, setShowNewHabit] = useState(false);
   const [newHabitTitle, setNewHabitTitle] = useState('');
   const [newHabitDesc, setNewHabitDesc] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -164,6 +176,43 @@ export const HabitManager: React.FC<Props> = ({ clientId }) => {
     }
   };
 
+  const deleteHabit = async () => {
+    if (!habitToDelete) return;
+
+    try {
+      // First delete all assignments
+      const { error: assignmentError } = await supabase
+        .from('habit_assignment')
+        .delete()
+        .eq('habit_id', habitToDelete);
+
+      if (assignmentError) throw assignmentError;
+
+      // Then delete the habit
+      const { error: habitError } = await supabase
+        .from('habit')
+        .delete()
+        .eq('id', habitToDelete);
+
+      if (habitError) throw habitError;
+
+      toast({ 
+        title: 'Habitude supprimée',
+        description: 'L\'habitude a été définitivement supprimée'
+      });
+      fetchHabits();
+    } catch (error) {
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de supprimer l\'habitude',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setHabitToDelete(null);
+    }
+  };
+
   if (loading) {
     return <div className="p-6">Chargement...</div>;
   }
@@ -224,10 +273,22 @@ export const HabitManager: React.FC<Props> = ({ clientId }) => {
                       <CardDescription>{habit.description}</CardDescription>
                     )}
                   </div>
-                  <Switch
-                    checked={isActive}
-                    onCheckedChange={() => toggleHabitAssignment(habit.id, isActive)}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={isActive}
+                      onCheckedChange={() => toggleHabitAssignment(habit.id, isActive)}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setHabitToDelete(habit.id);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
             </Card>
@@ -240,6 +301,27 @@ export const HabitManager: React.FC<Props> = ({ clientId }) => {
           <ClientHabitsTracker clientId={clientId} />
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette habitude ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. L'habitude sera définitivement supprimée 
+              pour tous les clients auxquels elle est assignée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={deleteHabit}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
