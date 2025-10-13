@@ -11,6 +11,7 @@ interface Exercise {
   reps?: number | null;
   temps_seconds?: number | null;
   charge_cible?: number | null;
+  couleur_elastique?: string | null;
   tips?: string | null;
   variations?: string | null;
   exercise: {
@@ -108,6 +109,13 @@ export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({ exerci
             </div>
           )}
         </div>
+
+        {/* Couleur élastique */}
+        {we.couleur_elastique && (
+          <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
+            <Badge variant="outline">Élastique {we.couleur_elastique}</Badge>
+          </div>
+        )}
 
         {/* Tips & Variations */}
         {(we.tips || we.variations) && (

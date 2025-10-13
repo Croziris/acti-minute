@@ -6,14 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SessionTimer } from '@/components/session/SessionTimer';
 import { ExerciseCard } from '@/components/session/ExerciseCard';
-import { ProofUpload } from '@/components/session/ProofUpload';
 import { CircuitTrainingView } from '@/components/client/CircuitTrainingView';
 import { useSessionData } from '@/hooks/useSessionData';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { CheckCircle, Clock, AlertCircle, ArrowLeft } from 'lucide-react';
+import { CheckCircle, Clock, AlertCircle, ArrowLeft, MessageCircle } from 'lucide-react';
 
 const ClientSession = () => {
   const { sessionId } = useParams();
@@ -298,12 +297,30 @@ const ClientSession = () => {
           </Card>
         )}
 
-        {/* Proof Upload */}
+        {/* WhatsApp Link */}
         {(sessionCompleted || session.statut === 'done') && (
-          <ProofUpload 
-            sessionId={session.id}
-            existingProofUrl={session.proof_media_url}
-          />
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Partage ton feedback</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                Envoie une preuve de séance à ton coach et partage ton feedback !
+              </p>
+              <Button
+                onClick={() => {
+                  const message = encodeURIComponent(
+                    "Voici ma preuve de séance et mon feedback :\n\n[Ajoute ici ta photo ou vidéo et ton ressenti sur la séance]"
+                  );
+                  window.open(`https://wa.me/?text=${message}`, '_blank');
+                }}
+                className="w-full bg-gradient-primary"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Contacter mon coach sur WhatsApp
+              </Button>
+            </CardContent>
+          </Card>
         )}
 
         {/* No Exercises */}

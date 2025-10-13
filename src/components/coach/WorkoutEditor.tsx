@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -28,6 +29,7 @@ interface WorkoutExercise {
   tempo: string | null;
   temps_repos_seconds: number | null;
   rpe_cible: number | null;
+  couleur_elastique: string | null;
   tips: string | null;
   exercise: {
     libelle: string;
@@ -345,6 +347,25 @@ export const WorkoutEditor: React.FC<Props> = ({ workoutId, workoutType, circuit
                       min="0"
                       max="10"
                     />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Couleur élastique</Label>
+                    <Select
+                      value={exercise.couleur_elastique || ''}
+                      onValueChange={(value) => handleUpdateExercise(exercise.id, 'couleur_elastique', value || null)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Aucune</SelectItem>
+                        <SelectItem value="Jaune">Jaune</SelectItem>
+                        <SelectItem value="Rouge">Rouge</SelectItem>
+                        <SelectItem value="Noir">Noir</SelectItem>
+                        <SelectItem value="Violet">Violet</SelectItem>
+                        <SelectItem value="Vert">Vert</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div>

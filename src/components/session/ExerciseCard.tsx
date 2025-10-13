@@ -4,7 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Play, Plus, Minus, Star, Info } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { getYouTubeEmbedUrl, isYouTubeShort } from '@/lib/utils';
 
@@ -26,6 +33,7 @@ interface ExerciseCardProps {
     charge_cible?: number;
     tempo?: string;
     couleur?: string;
+    couleur_elastique?: string;
     tips?: string;
     variations?: string;
   };
@@ -58,6 +66,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   const [showVideo, setShowVideo] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedback, setFeedback] = useState({ difficulte: 5, plaisir: 5 });
+  const [rpeDialogOpen, setRpeDialogOpen] = useState(false);
 
   const totalSets = workoutExercise.series || 3;
 
@@ -178,6 +187,13 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           </div>
         </div>
 
+        {/* Couleur élastique */}
+        {workoutExercise.couleur_elastique && (
+          <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
+            <Badge variant="outline">Élastique {workoutExercise.couleur_elastique}</Badge>
+          </div>
+        )}
+
         {/* Tips & Variations */}
         {(workoutExercise.tips || workoutExercise.variations) && (
           <div className="space-y-2">
@@ -263,22 +279,26 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium">RPE (1-10)</label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center justify-center w-4 h-4 rounded-full bg-muted cursor-help">
+              <Dialog open={rpeDialogOpen} onOpenChange={setRpeDialogOpen}>
+                <DialogTrigger asChild>
+                  <button type="button" className="focus:outline-none">
+                    <div className="flex items-center justify-center w-4 h-4 rounded-full bg-muted cursor-pointer hover:bg-muted/80">
                       <Info className="h-3 w-3 text-muted-foreground" />
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p className="font-semibold mb-1">Échelle de Perception d'Effort</p>
-                    <p className="text-xs">De 1 à 10 :</p>
-                    <p className="text-xs">• 1 : Sans effort, pas d'augmentation de la fréquence cardiaque</p>
-                    <p className="text-xs">• 5 : Activité physique légère à modérée</p>
-                    <p className="text-xs">• 10 : Effort maximal endurable</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                  </button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Échelle de Perception d'Effort (RPE)</DialogTitle>
+                    <DialogDescription className="space-y-2 pt-2">
+                      <p className="font-medium">De 1 à 10 :</p>
+                      <p>• <span className="font-medium">1</span> : Sans effort, pas d'augmentation de la fréquence cardiaque et respiratoire</p>
+                      <p>• <span className="font-medium">5</span> : Activité physique légère à modérée</p>
+                      <p>• <span className="font-medium">10</span> : Effort maximal endurable</p>
+                    </DialogDescription>
+                  </DialogHeader>
+                </DialogContent>
+              </Dialog>
             </div>
             <div className="flex items-center space-x-1 mt-2">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(rating => (

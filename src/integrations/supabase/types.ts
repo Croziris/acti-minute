@@ -576,6 +576,7 @@ export type Database = {
         Row: {
           charge_cible: number | null
           couleur: string | null
+          couleur_elastique: string | null
           exercise_id: string | null
           id: string
           order_index: number | null
@@ -592,6 +593,7 @@ export type Database = {
         Insert: {
           charge_cible?: number | null
           couleur?: string | null
+          couleur_elastique?: string | null
           exercise_id?: string | null
           id?: string
           order_index?: number | null
@@ -608,6 +610,7 @@ export type Database = {
         Update: {
           charge_cible?: number | null
           couleur?: string | null
+          couleur_elastique?: string | null
           exercise_id?: string | null
           id?: string
           order_index?: number | null
