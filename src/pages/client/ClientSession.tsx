@@ -235,18 +235,47 @@ const ClientSession = () => {
         {/* Start Session Button */}
         {!sessionStarted && session.statut === 'planned' && (
           <Card>
-            <CardContent className="p-6 text-center">
-              <Clock className="h-12 w-12 mx-auto mb-4 text-primary" />
-              <h3 className="text-lg font-semibold mb-2">Prêt à commencer ?</h3>
-              <p className="text-muted-foreground mb-4">
-                {session.workout?.duree_estimee && 
-                  `Durée estimée: ${session.workout.duree_estimee} minutes`
-                }
-              </p>
-              <Button onClick={startSession} size="lg" className="bg-gradient-primary">
-                <Clock className="h-4 w-4 mr-2" />
-                Démarrer la séance
-              </Button>
+            <CardContent className="p-6">
+              <div className="text-center mb-6">
+                <Clock className="h-12 w-12 mx-auto mb-4 text-primary" />
+                <h3 className="text-lg font-semibold mb-2">Prêt à commencer ?</h3>
+                <p className="text-muted-foreground mb-4">
+                  {session.workout?.duree_estimee && 
+                    `Durée estimée: ${session.workout.duree_estimee} minutes`
+                  }
+                </p>
+              </div>
+
+              {/* Exercise Preview */}
+              {exercises.length > 0 && (
+                <div className="mb-6 p-4 bg-muted/30 rounded-lg">
+                  <p className="text-sm font-medium mb-3">
+                    Voici les exercices de ta séance d'aujourd'hui :
+                  </p>
+                  <ul className="space-y-2">
+                    {exercises.map((we, index) => (
+                      <li key={we.id} className="text-sm flex items-start gap-2">
+                        <Badge variant="outline" className="font-mono text-xs mt-0.5">
+                          {index + 1}
+                        </Badge>
+                        <span className="flex-1">{we.exercise.libelle}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {isCircuitWorkout && (
+                    <p className="text-xs text-muted-foreground mt-3 italic">
+                      Circuit de {session.workout.circuit_rounds} tours
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="text-center">
+                <Button onClick={startSession} size="lg" className="bg-gradient-primary">
+                  <Clock className="h-4 w-4 mr-2" />
+                  Démarrer la séance
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
