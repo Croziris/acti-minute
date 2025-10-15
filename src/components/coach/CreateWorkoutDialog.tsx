@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,8 +26,8 @@ export const CreateWorkoutDialog: React.FC<Props> = ({ open, onOpenChange, onSuc
   const [description, setDescription] = useState('');
   const [dureeEstimee, setDureeEstimee] = useState('');
   const [workoutType, setWorkoutType] = useState<'classic' | 'circuit'>('classic');
-  const [circuitRounds, setCircuitRounds] = useState('');
-  const [tempsReposTours, setTempsReposTours] = useState('60');
+  const [nombreCircuits, setNombreCircuits] = useState('1');
+  const [circuitConfigs, setCircuitConfigs] = useState([{ rounds: '3', rest: '60' }]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -35,8 +36,23 @@ export const CreateWorkoutDialog: React.FC<Props> = ({ open, onOpenChange, onSuc
     setDescription('');
     setDureeEstimee('');
     setWorkoutType('classic');
-    setCircuitRounds('');
-    setTempsReposTours('60');
+    setNombreCircuits('1');
+    setCircuitConfigs([{ rounds: '3', rest: '60' }]);
+  };
+
+  const handleNombreCircuitsChange = (value: string) => {
+    setNombreCircuits(value);
+    const num = value === 'custom' ? 3 : parseInt(value);
+    const newConfigs = Array.from({ length: num }, (_, i) => 
+      circuitConfigs[i] || { rounds: '3', rest: '60' }
+    );
+    setCircuitConfigs(newConfigs);
+  };
+
+  const updateCircuitConfig = (index: number, field: 'rounds' | 'rest', value: string) => {
+    const newConfigs = [...circuitConfigs];
+    newConfigs[index] = { ...newConfigs[index], [field]: value };
+    setCircuitConfigs(newConfigs);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,17 +67,25 @@ export const CreateWorkoutDialog: React.FC<Props> = ({ open, onOpenChange, onSuc
       return;
     }
 
-    if (workoutType === 'circuit' && !circuitRounds) {
-      toast({
-        title: "Erreur",
-        description: "Le nombre de tours est requis pour un circuit",
-        variant: "destructive"
-      });
-      return;
+    if (workoutType === 'circuit') {
+      const hasInvalidConfig = circuitConfigs.some(config => !config.rounds);
+      if (hasInvalidConfig) {
+        toast({
+          title: "Erreur",
+          description: "Le nombre de tours est requis pour chaque circuit",
+          variant: "destructive"
+        });
+        return;
+      }
     }
 
     try {
       setLoading(true);
+
+      const configs = circuitConfigs.map(c => ({
+        rounds: parseInt(c.rounds),
+        rest: parseInt(c.rest)
+      }));
 
       const { error } = await supabase
         .from('workout')
@@ -70,8 +94,11 @@ export const CreateWorkoutDialog: React.FC<Props> = ({ open, onOpenChange, onSuc
           description: description.trim() || null,
           duree_estimee: dureeEstimee ? parseInt(dureeEstimee) : null,
           workout_type: workoutType,
-          circuit_rounds: workoutType === 'circuit' ? parseInt(circuitRounds) : null,
-          temps_repos_tours_seconds: workoutType === 'circuit' ? parseInt(tempsReposTours) : null,
+          nombre_circuits: workoutType === 'circuit' ? circuitConfigs.length : 1,
+          circuit_configs: workoutType === 'circuit' ? configs : null,
+          // Garder la compatibilité avec l'ancien système
+          circuit_rounds: workoutType === 'circuit' ? configs[0].rounds : null,
+          temps_repos_tours_seconds: workoutType === 'circuit' ? configs[0].rest : null,
           is_template: true
         });
 
@@ -163,34 +190,75 @@ export const CreateWorkoutDialog: React.FC<Props> = ({ open, onOpenChange, onSuc
           {workoutType === 'circuit' && (
             <>
               <div>
-                <Label htmlFor="rounds">Nombre de tours *</Label>
-                <Input
-                  id="rounds"
-                  type="number"
-                  value={circuitRounds}
-                  onChange={(e) => setCircuitRounds(e.target.value)}
-                  placeholder="Ex: 4"
-                  min="1"
-                  required
-                />
+                <Label htmlFor="nombre-circuits">Nombre de circuits</Label>
+                <Select value={nombreCircuits} onValueChange={handleNombreCircuitsChange}>
+                  <SelectTrigger id="nombre-circuits">
+                    <SelectValue placeholder="Sélectionnez" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 circuit</SelectItem>
+                    <SelectItem value="2">2 circuits</SelectItem>
+                    <SelectItem value="3">3 circuits</SelectItem>
+                    <SelectItem value="custom">Personnalisé</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              
-              <div>
-                <Label htmlFor="rest">Temps de repos entre tours (secondes)</Label>
-                <Input
-                  id="rest"
-                  type="number"
-                  value={tempsReposTours}
-                  onChange={(e) => setTempsReposTours(e.target.value)}
-                  placeholder="60"
-                  min="0"
-                  max="300"
-                  step="15"
-                />
-                <p className="text-sm text-muted-foreground mt-1">
-                  Repos recommandé : 30-90 secondes
-                </p>
-              </div>
+
+              {nombreCircuits === 'custom' && (
+                <div>
+                  <Label htmlFor="custom-circuits">Nombre de circuits personnalisé</Label>
+                  <Input
+                    id="custom-circuits"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={circuitConfigs.length}
+                    onChange={(e) => {
+                      const num = parseInt(e.target.value) || 1;
+                      const newConfigs = Array.from({ length: num }, (_, i) => 
+                        circuitConfigs[i] || { rounds: '3', rest: '60' }
+                      );
+                      setCircuitConfigs(newConfigs);
+                    }}
+                  />
+                </div>
+              )}
+
+              {circuitConfigs.map((config, index) => (
+                <div key={index} className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="font-semibold text-sm">
+                    Circuit {index + 1}
+                  </h4>
+                  <div>
+                    <Label htmlFor={`rounds-${index}`}>Nombre de tours *</Label>
+                    <Input
+                      id={`rounds-${index}`}
+                      type="number"
+                      value={config.rounds}
+                      onChange={(e) => updateCircuitConfig(index, 'rounds', e.target.value)}
+                      placeholder="Ex: 3"
+                      min="1"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`rest-${index}`}>Temps de repos entre tours (secondes)</Label>
+                    <Input
+                      id={`rest-${index}`}
+                      type="number"
+                      value={config.rest}
+                      onChange={(e) => updateCircuitConfig(index, 'rest', e.target.value)}
+                      placeholder="60"
+                      min="0"
+                      max="300"
+                      step="15"
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Repos recommandé : 30-90 secondes
+                    </p>
+                  </div>
+                </div>
+              ))}
             </>
           )}
 

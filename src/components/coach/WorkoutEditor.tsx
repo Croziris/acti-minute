@@ -30,6 +30,7 @@ interface WorkoutExercise {
   temps_repos_seconds: number | null;
   rpe_cible: number | null;
   couleur_elastique: string | null;
+  circuit_number: number;
   tips: string | null;
   exercise: {
     libelle: string;
@@ -41,13 +42,29 @@ interface Props {
   workoutId: string;
   workoutType: 'classic' | 'circuit';
   circuitRounds?: number;
+  nombreCircuits?: number;
+  circuitConfigs?: Array<{ rounds: number; rest: number }>;
 }
 
-export const WorkoutEditor: React.FC<Props> = ({ workoutId, workoutType, circuitRounds }) => {
+export const WorkoutEditor: React.FC<Props> = ({ 
+  workoutId, 
+  workoutType, 
+  circuitRounds, 
+  nombreCircuits = 1,
+  circuitConfigs = [{ rounds: 3, rest: 60 }]
+}) => {
   const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectExerciseOpen, setSelectExerciseOpen] = useState(false);
   const { toast } = useToast();
+
+  // Grouper les exercices par circuit
+  const exercisesByCircuit = exercises.reduce((acc, exercise) => {
+    const circuitNum = exercise.circuit_number || 1;
+    if (!acc[circuitNum]) acc[circuitNum] = [];
+    acc[circuitNum].push(exercise);
+    return acc;
+  }, {} as Record<number, WorkoutExercise[]>);
 
   const fetchExercises = async () => {
     try {
@@ -95,7 +112,8 @@ export const WorkoutEditor: React.FC<Props> = ({ workoutId, workoutType, circuit
           exercise_id: exercise.id,
           order_index: maxOrderIndex + 1,
           series: workoutType === 'classic' ? 3 : null,
-          reps: 10
+          reps: 10,
+          circuit_number: 1 // Par défaut, on ajoute au premier circuit
         });
 
       if (error) throw error;
@@ -201,13 +219,13 @@ export const WorkoutEditor: React.FC<Props> = ({ workoutId, workoutType, circuit
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-lg font-semibold">Exercices de la séance</h3>
-          {workoutType === 'circuit' && circuitRounds && (
+          {workoutType === 'circuit' && nombreCircuits > 1 && (
             <p className="text-sm text-muted-foreground">
-              Circuit à faire {circuitRounds} tour{circuitRounds > 1 ? 's' : ''}
+              {nombreCircuits} circuits distincts
             </p>
           )}
         </div>
@@ -228,158 +246,68 @@ export const WorkoutEditor: React.FC<Props> = ({ workoutId, workoutType, circuit
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {exercises.map((exercise, index) => (
-            <Card key={exercise.id}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3 flex-1">
-                    <div className="flex flex-col gap-1 mt-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => handleMoveExercise(exercise.id, 'up')}
-                        disabled={index === 0}
-                      >
-                        <ChevronUp className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => handleMoveExercise(exercise.id, 'down')}
-                        disabled={index === exercises.length - 1}
-                      >
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-base">
-                        {index + 1}. {exercise.exercise.libelle}
-                      </CardTitle>
-                      {exercise.exercise.description && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {exercise.exercise.description}
-                        </p>
-                      )}
-                    </div>
+        <div className="space-y-6">
+          {workoutType === 'circuit' && nombreCircuits > 1 ? (
+            // Affichage par circuit pour les séances multi-circuits
+            Array.from({ length: nombreCircuits }, (_, i) => i + 1).map(circuitNum => {
+              const circuitExercises = exercisesByCircuit[circuitNum] || [];
+              const config = circuitConfigs[circuitNum - 1] || { rounds: 3, rest: 60 };
+              
+              return (
+                <div key={circuitNum} className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline" className="text-base px-3 py-1">
+                      Circuit {circuitNum}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {config.rounds} tours · {config.rest}s de repos
+                    </span>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteExercise(exercise.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {workoutType === 'classic' && (
-                    <div>
-                      <Label className="text-xs">Séries</Label>
-                      <Input
-                        type="number"
-                        value={exercise.series || ''}
-                        onChange={(e) => handleUpdateExercise(exercise.id, 'series', e.target.value ? parseInt(e.target.value) : null)}
-                        placeholder="3"
-                        min="1"
-                      />
-                    </div>
+                  
+                  {circuitExercises.length === 0 ? (
+                    <Card className="border-dashed">
+                      <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                        Aucun exercice dans ce circuit
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    circuitExercises
+                      .sort((a, b) => a.order_index - b.order_index)
+                      .map((exercise, index) => (
+                        <ExerciseEditorCard
+                          key={exercise.id}
+                          exercise={exercise}
+                          index={index}
+                          totalExercises={circuitExercises.length}
+                          workoutType={workoutType}
+                          nombreCircuits={nombreCircuits}
+                          onUpdate={handleUpdateExercise}
+                          onDelete={handleDeleteExercise}
+                          onMove={handleMoveExercise}
+                        />
+                      ))
                   )}
-                  <div>
-                    <Label className="text-xs">Répétitions</Label>
-                    <Input
-                      type="number"
-                      value={exercise.reps || ''}
-                      onChange={(e) => handleUpdateExercise(exercise.id, 'reps', e.target.value ? parseInt(e.target.value) : null)}
-                      placeholder="10"
-                      min="1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Temps (sec)</Label>
-                    <Input
-                      type="number"
-                      value={exercise.temps_seconds || ''}
-                      onChange={(e) => handleUpdateExercise(exercise.id, 'temps_seconds', e.target.value ? parseInt(e.target.value) : null)}
-                      placeholder="30"
-                      min="1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Charge (kg)</Label>
-                    <Input
-                      type="number"
-                      step="0.5"
-                      value={exercise.charge_cible || ''}
-                      onChange={(e) => handleUpdateExercise(exercise.id, 'charge_cible', e.target.value ? parseFloat(e.target.value) : null)}
-                      placeholder="20"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Tempo</Label>
-                    <Input
-                      value={exercise.tempo || ''}
-                      onChange={(e) => handleUpdateExercise(exercise.id, 'tempo', e.target.value || null)}
-                      placeholder="2-0-2-0"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Repos (sec)</Label>
-                    <Input
-                      type="number"
-                      value={exercise.temps_repos_seconds || ''}
-                      onChange={(e) => handleUpdateExercise(exercise.id, 'temps_repos_seconds', e.target.value ? parseInt(e.target.value) : null)}
-                      placeholder="60"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">RPE cible</Label>
-                    <Input
-                      type="number"
-                      step="0.5"
-                      value={exercise.rpe_cible || ''}
-                      onChange={(e) => handleUpdateExercise(exercise.id, 'rpe_cible', e.target.value ? parseFloat(e.target.value) : null)}
-                      placeholder="7"
-                      min="0"
-                      max="10"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Couleur élastique</Label>
-                    <Select
-                      value={exercise.couleur_elastique || ''}
-                      onValueChange={(value) => handleUpdateExercise(exercise.id, 'couleur_elastique', value || null)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Aucune</SelectItem>
-                        <SelectItem value="Jaune">Jaune</SelectItem>
-                        <SelectItem value="Rouge">Rouge</SelectItem>
-                        <SelectItem value="Noir">Noir</SelectItem>
-                        <SelectItem value="Violet">Violet</SelectItem>
-                        <SelectItem value="Vert">Vert</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
-                <div>
-                  <Label className="text-xs">Consignes spécifiques</Label>
-                  <Textarea
-                    value={exercise.tips || ''}
-                    onChange={(e) => handleUpdateExercise(exercise.id, 'tips', e.target.value || null)}
-                    placeholder="Consignes particulières pour cet exercice dans cette séance..."
-                    rows={2}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+              );
+            })
+          ) : (
+            // Affichage normal pour les séances classiques ou single circuit
+            <div className="space-y-3">
+              {exercises.map((exercise, index) => (
+                <ExerciseEditorCard
+                  key={exercise.id}
+                  exercise={exercise}
+                  index={index}
+                  totalExercises={exercises.length}
+                  workoutType={workoutType}
+                  nombreCircuits={nombreCircuits}
+                  onUpdate={handleUpdateExercise}
+                  onDelete={handleDeleteExercise}
+                  onMove={handleMoveExercise}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -398,5 +326,200 @@ export const WorkoutEditor: React.FC<Props> = ({ workoutId, workoutType, circuit
         </DialogContent>
       </Dialog>
     </div>
+  );
+};
+
+// Composant séparé pour l'édition d'un exercice
+interface ExerciseEditorCardProps {
+  exercise: WorkoutExercise;
+  index: number;
+  totalExercises: number;
+  workoutType: 'classic' | 'circuit';
+  nombreCircuits: number;
+  onUpdate: (id: string, field: string, value: any) => void;
+  onDelete: (id: string) => void;
+  onMove: (id: string, direction: 'up' | 'down') => void;
+}
+
+const ExerciseEditorCard: React.FC<ExerciseEditorCardProps> = ({
+  exercise,
+  index,
+  totalExercises,
+  workoutType,
+  nombreCircuits,
+  onUpdate,
+  onDelete,
+  onMove
+}) => {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-3 flex-1">
+            <div className="flex flex-col gap-1 mt-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={() => onMove(exercise.id, 'up')}
+                disabled={index === 0}
+              >
+                <ChevronUp className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={() => onMove(exercise.id, 'down')}
+                disabled={index === totalExercises - 1}
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex-1">
+              <CardTitle className="text-base">
+                {index + 1}. {exercise.exercise.libelle}
+              </CardTitle>
+              {exercise.exercise.description && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {exercise.exercise.description}
+                </p>
+              )}
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(exercise.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {workoutType === 'classic' && (
+            <div>
+              <Label className="text-xs">Séries</Label>
+              <Input
+                type="number"
+                value={exercise.series || ''}
+                onChange={(e) => onUpdate(exercise.id, 'series', e.target.value ? parseInt(e.target.value) : null)}
+                placeholder="3"
+                min="1"
+              />
+            </div>
+          )}
+          {nombreCircuits > 1 && (
+            <div>
+              <Label className="text-xs">Circuit n°</Label>
+              <Select
+                value={exercise.circuit_number?.toString() || '1'}
+                onValueChange={(value) => onUpdate(exercise.id, 'circuit_number', parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: nombreCircuits }, (_, i) => i + 1).map(num => (
+                    <SelectItem key={num} value={num.toString()}>
+                      Circuit {num}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div>
+            <Label className="text-xs">Répétitions</Label>
+            <Input
+              type="number"
+              value={exercise.reps || ''}
+              onChange={(e) => onUpdate(exercise.id, 'reps', e.target.value ? parseInt(e.target.value) : null)}
+              placeholder="10"
+              min="1"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Temps (sec)</Label>
+            <Input
+              type="number"
+              value={exercise.temps_seconds || ''}
+              onChange={(e) => onUpdate(exercise.id, 'temps_seconds', e.target.value ? parseInt(e.target.value) : null)}
+              placeholder="30"
+              min="1"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Charge (kg)</Label>
+            <Input
+              type="number"
+              step="0.5"
+              value={exercise.charge_cible || ''}
+              onChange={(e) => onUpdate(exercise.id, 'charge_cible', e.target.value ? parseFloat(e.target.value) : null)}
+              placeholder="20"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Tempo</Label>
+            <Input
+              value={exercise.tempo || ''}
+              onChange={(e) => onUpdate(exercise.id, 'tempo', e.target.value || null)}
+              placeholder="2-0-2-0"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Repos (sec)</Label>
+            <Input
+              type="number"
+              value={exercise.temps_repos_seconds || ''}
+              onChange={(e) => onUpdate(exercise.id, 'temps_repos_seconds', e.target.value ? parseInt(e.target.value) : null)}
+              placeholder="60"
+              min="0"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">RPE cible</Label>
+            <Input
+              type="number"
+              step="0.5"
+              value={exercise.rpe_cible || ''}
+              onChange={(e) => onUpdate(exercise.id, 'rpe_cible', e.target.value ? parseFloat(e.target.value) : null)}
+              placeholder="7"
+              min="0"
+              max="10"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Couleur élastique</Label>
+            <Select
+              value={exercise.couleur_elastique || ''}
+              onValueChange={(value) => onUpdate(exercise.id, 'couleur_elastique', value || null)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Aucune</SelectItem>
+                <SelectItem value="Jaune">Jaune</SelectItem>
+                <SelectItem value="Rouge">Rouge</SelectItem>
+                <SelectItem value="Noir">Noir</SelectItem>
+                <SelectItem value="Violet">Violet</SelectItem>
+                <SelectItem value="Vert">Vert</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div>
+          <Label className="text-xs">Consignes spécifiques</Label>
+          <Textarea
+            value={exercise.tips || ''}
+            onChange={(e) => onUpdate(exercise.id, 'tips', e.target.value || null)}
+            placeholder="Consignes particulières pour cet exercice dans cette séance..."
+            rows={2}
+          />
+        </div>
+      </CardContent>
+    </Card>
   );
 };

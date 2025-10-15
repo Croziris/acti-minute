@@ -288,6 +288,8 @@ const ClientSession = () => {
               circuitRounds={session.workout.circuit_rounds || 3}
               restTime={session.workout.temps_repos_tours_seconds || 60}
               sessionId={session.id}
+              nombreCircuits={session.workout.nombre_circuits || 1}
+              circuitConfigs={session.workout.circuit_configs || undefined}
               onRoundComplete={handleRoundComplete}
               onAllComplete={handleCircuitComplete}
             />

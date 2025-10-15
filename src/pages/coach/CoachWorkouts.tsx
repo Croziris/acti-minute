@@ -26,6 +26,8 @@ interface Workout {
   duree_estimee: number | null;
   workout_type: 'classic' | 'circuit';
   circuit_rounds: number | null;
+  nombre_circuits: number;
+  circuit_configs: Array<{ rounds: number; rest: number }> | null;
   created_at: string;
   exercise_count?: number;
 }
@@ -246,6 +248,8 @@ const CoachWorkouts = () => {
             workoutId={editingWorkout.id}
             workoutType={editingWorkout.workout_type}
             circuitRounds={editingWorkout.circuit_rounds || undefined}
+            nombreCircuits={editingWorkout.nombre_circuits || 1}
+            circuitConfigs={editingWorkout.circuit_configs || undefined}
           />
         </div>
       </CoachLayout>

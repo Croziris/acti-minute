@@ -527,36 +527,42 @@ export type Database = {
       }
       workout: {
         Row: {
+          circuit_configs: Json | null
           circuit_rounds: number | null
           created_at: string | null
           description: string | null
           duree_estimee: number | null
           id: string
           is_template: boolean | null
+          nombre_circuits: number | null
           program_id: string | null
           temps_repos_tours_seconds: number | null
           titre: string | null
           workout_type: string | null
         }
         Insert: {
+          circuit_configs?: Json | null
           circuit_rounds?: number | null
           created_at?: string | null
           description?: string | null
           duree_estimee?: number | null
           id?: string
           is_template?: boolean | null
+          nombre_circuits?: number | null
           program_id?: string | null
           temps_repos_tours_seconds?: number | null
           titre?: string | null
           workout_type?: string | null
         }
         Update: {
+          circuit_configs?: Json | null
           circuit_rounds?: number | null
           created_at?: string | null
           description?: string | null
           duree_estimee?: number | null
           id?: string
           is_template?: boolean | null
+          nombre_circuits?: number | null
           program_id?: string | null
           temps_repos_tours_seconds?: number | null
           titre?: string | null
@@ -575,6 +581,7 @@ export type Database = {
       workout_exercise: {
         Row: {
           charge_cible: number | null
+          circuit_number: number | null
           couleur: string | null
           couleur_elastique: string | null
           exercise_id: string | null
@@ -592,6 +599,7 @@ export type Database = {
         }
         Insert: {
           charge_cible?: number | null
+          circuit_number?: number | null
           couleur?: string | null
           couleur_elastique?: string | null
           exercise_id?: string | null
@@ -609,6 +617,7 @@ export type Database = {
         }
         Update: {
           charge_cible?: number | null
+          circuit_number?: number | null
           couleur?: string | null
           couleur_elastique?: string | null
           exercise_id?: string | null

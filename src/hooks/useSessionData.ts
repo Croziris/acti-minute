@@ -20,6 +20,8 @@ export interface Session {
     workout_type?: string;
     circuit_rounds?: number;
     temps_repos_tours_seconds?: number;
+    nombre_circuits?: number;
+    circuit_configs?: Array<{ rounds: number; rest: number }>;
     workout_exercise: Array<{
       id: string;
       exercise_id: string;
@@ -77,7 +79,9 @@ export const useSessionData = (sessionId?: string) => {
               duree_estimee,
               workout_type,
               circuit_rounds,
-              temps_repos_tours_seconds
+              temps_repos_tours_seconds,
+              nombre_circuits,
+              circuit_configs
             `)
             .eq('id', sessionData.workout_id)
             .single();
@@ -109,6 +113,7 @@ export const useSessionData = (sessionId?: string) => {
             statut: sessionData.statut as Session['statut'],
             workout: {
               ...workoutData,
+              circuit_configs: workoutData.circuit_configs as Array<{ rounds: number; rest: number }> | undefined,
               workout_exercise: workoutExerciseData || []
             }
           };
