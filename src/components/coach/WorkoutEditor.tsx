@@ -56,6 +56,7 @@ export const WorkoutEditor: React.FC<Props> = ({
   const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectExerciseOpen, setSelectExerciseOpen] = useState(false);
+  const [selectedCircuitForAdd, setSelectedCircuitForAdd] = useState<number>(1);
   const { toast } = useToast();
 
   // Grouper les exercices par circuit
@@ -113,14 +114,14 @@ export const WorkoutEditor: React.FC<Props> = ({
           order_index: maxOrderIndex + 1,
           series: workoutType === 'classic' ? 3 : null,
           reps: 10,
-          circuit_number: 1 // Par défaut, on ajoute au premier circuit
+          circuit_number: selectedCircuitForAdd
         });
 
       if (error) throw error;
 
       toast({
         title: "Exercice ajouté",
-        description: `${exercise.libelle} a été ajouté à la séance`
+        description: `${exercise.libelle} a été ajouté au circuit ${selectedCircuitForAdd}`
       });
 
       setSelectExerciseOpen(false);
@@ -133,6 +134,11 @@ export const WorkoutEditor: React.FC<Props> = ({
         variant: "destructive"
       });
     }
+  };
+
+  const openAddExerciseDialog = (circuitNumber: number = 1) => {
+    setSelectedCircuitForAdd(circuitNumber);
+    setSelectExerciseOpen(true);
   };
 
   const handleUpdateExercise = async (exerciseId: string, field: string, value: any) => {
@@ -220,56 +226,47 @@ export const WorkoutEditor: React.FC<Props> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-semibold">Exercices de la séance</h3>
-          {workoutType === 'circuit' && nombreCircuits > 1 && (
-            <p className="text-sm text-muted-foreground">
-              {nombreCircuits} circuits distincts
-            </p>
-          )}
-        </div>
-        <Button onClick={() => setSelectExerciseOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Ajouter un exercice
-        </Button>
-      </div>
-
-      {exercises.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground mb-4">Aucun exercice dans cette séance</p>
-            <Button onClick={() => setSelectExerciseOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter un exercice
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
+      {workoutType === 'circuit' && nombreCircuits > 1 ? (
+        // Affichage par circuit pour les séances multi-circuits
         <div className="space-y-6">
-          {workoutType === 'circuit' && nombreCircuits > 1 ? (
-            // Affichage par circuit pour les séances multi-circuits
-            Array.from({ length: nombreCircuits }, (_, i) => i + 1).map(circuitNum => {
-              const circuitExercises = exercisesByCircuit[circuitNum] || [];
-              const config = circuitConfigs[circuitNum - 1] || { rounds: 3, rest: 60 };
-              
-              return (
-                <div key={circuitNum} className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="text-base px-3 py-1">
-                      Circuit {circuitNum}
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {config.rounds} tours · {config.rest}s de repos
-                    </span>
+          {Array.from({ length: nombreCircuits }, (_, i) => i + 1).map(circuitNum => {
+            const circuitExercises = exercisesByCircuit[circuitNum] || [];
+            const config = circuitConfigs[circuitNum - 1] || { rounds: 3, rest: 60 };
+            
+            return (
+              <Card key={circuitNum} className="border-2">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <CardTitle className="text-lg">Circuit {circuitNum}</CardTitle>
+                      <Badge variant="secondary">
+                        {config.rounds} tours · {config.rest}s de repos
+                      </Badge>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      onClick={() => openAddExerciseDialog(circuitNum)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Ajouter un exercice
+                    </Button>
                   </div>
-                  
+                </CardHeader>
+                <CardContent className="space-y-3">
                   {circuitExercises.length === 0 ? (
-                    <Card className="border-dashed">
-                      <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    <div className="py-8 text-center">
+                      <p className="text-sm text-muted-foreground mb-4">
                         Aucun exercice dans ce circuit
-                      </CardContent>
-                    </Card>
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => openAddExerciseDialog(circuitNum)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Ajouter le premier exercice
+                      </Button>
+                    </div>
                   ) : (
                     circuitExercises
                       .sort((a, b) => a.order_index - b.order_index)
@@ -287,11 +284,33 @@ export const WorkoutEditor: React.FC<Props> = ({
                         />
                       ))
                   )}
-                </div>
-              );
-            })
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        // Affichage normal pour les séances classiques ou single circuit
+        <>
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Exercices de la séance</h3>
+            <Button onClick={() => openAddExerciseDialog(1)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter un exercice
+            </Button>
+          </div>
+
+          {exercises.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <p className="text-muted-foreground mb-4">Aucun exercice dans cette séance</p>
+                <Button onClick={() => openAddExerciseDialog(1)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter un exercice
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
-            // Affichage normal pour les séances classiques ou single circuit
             <div className="space-y-3">
               {exercises.map((exercise, index) => (
                 <ExerciseEditorCard
@@ -308,7 +327,7 @@ export const WorkoutEditor: React.FC<Props> = ({
               ))}
             </div>
           )}
-        </div>
+        </>
       )}
 
       <Dialog open={selectExerciseOpen} onOpenChange={setSelectExerciseOpen}>
