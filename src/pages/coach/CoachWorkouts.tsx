@@ -69,6 +69,8 @@ const CoachWorkouts = () => {
             duree_estimee: workout.duree_estimee,
             workout_type: (workout.workout_type || 'classic') as 'classic' | 'circuit',
             circuit_rounds: workout.circuit_rounds,
+            nombre_circuits: workout.nombre_circuits || 1,
+            circuit_configs: workout.circuit_configs || [{ rounds: 3, rest: 60 }],
             created_at: workout.created_at,
             exercise_count: count || 0
           } as Workout;
