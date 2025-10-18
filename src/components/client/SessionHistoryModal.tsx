@@ -33,6 +33,7 @@ interface SessionDetails {
   statut: string;
   date_demarree: string | null;
   date_terminee: string | null;
+  commentaire_fin: string | null;
   workout: {
     titre: string;
     workout_type: string;
@@ -78,6 +79,7 @@ export const SessionHistoryModal: React.FC<SessionHistoryModalProps> = ({
           statut,
           date_demarree,
           date_terminee,
+          commentaire_fin,
           workout:workout_id (
             titre,
             workout_type,
@@ -184,6 +186,17 @@ export const SessionHistoryModal: React.FC<SessionHistoryModalProps> = ({
         </DialogHeader>
 
         <ScrollArea className="max-h-[calc(90vh-150px)] pr-4">
+          {session.commentaire_fin && (
+            <Card className="mb-4 border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-base">Mon commentaire de fin de séance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm italic text-muted-foreground">"{session.commentaire_fin}"</p>
+              </CardContent>
+            </Card>
+          )}
+          
           <div className="space-y-4">
             {session.workout.workout_exercises
               .sort((a, b) => a.order_index - b.order_index)

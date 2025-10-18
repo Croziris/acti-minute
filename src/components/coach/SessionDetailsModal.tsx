@@ -34,6 +34,7 @@ interface SessionDetails {
   statut: string;
   date_demarree: string | null;
   date_terminee: string | null;
+  commentaire_fin: string | null;
   workout: {
     titre: string;
     workout_type: string;
@@ -80,6 +81,7 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
           statut,
           date_demarree,
           date_terminee,
+          commentaire_fin,
           workout:workout_id (
             titre,
             workout_type,
@@ -194,6 +196,17 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
         </DialogHeader>
 
         <ScrollArea className="max-h-[calc(90vh-150px)] pr-4">
+          {session.commentaire_fin && (
+            <Card className="mb-4 border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-base">Commentaire de fin de séance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm italic text-muted-foreground">"{session.commentaire_fin}"</p>
+              </CardContent>
+            </Card>
+          )}
+          
           {session.statut === 'planned' ? (
             <div className="space-y-4">
               <div className="bg-muted/50 p-4 rounded-lg">

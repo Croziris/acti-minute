@@ -23,6 +23,7 @@ const ClientSession = () => {
   const [sessionStarted, setSessionStarted] = useState(false);
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set());
   const [sessionCompleted, setSessionCompleted] = useState(false);
+  const [commentaireFin, setCommentaireFin] = useState('');
 
   useEffect(() => {
     if (session?.statut === 'ongoing') {
@@ -80,7 +81,8 @@ const ClientSession = () => {
     try {
       const updateData = {
         statut: 'done',
-        date_terminee: new Date().toISOString()
+        date_terminee: new Date().toISOString(),
+        commentaire_fin: commentaireFin || null
       };
 
       if (isOnline) {
@@ -314,16 +316,37 @@ const ClientSession = () => {
         {/* Complete Session */}
         {sessionStarted && !sessionCompleted && canComplete && (
           <Card>
-            <CardContent className="p-6 text-center">
-              <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-600" />
-              <h3 className="text-lg font-semibold mb-2">Séance terminée !</h3>
-              <p className="text-muted-foreground mb-4">
-                Félicitations, vous avez terminé tous les exercices.
-              </p>
-              <Button onClick={completeSession} size="lg" className="bg-gradient-primary">
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Confirmer la fin de séance
-              </Button>
+            <CardContent className="p-6">
+              <div className="text-center mb-6">
+                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-600" />
+                <h3 className="text-lg font-semibold mb-2">Séance terminée !</h3>
+                <p className="text-muted-foreground mb-4">
+                  Félicitations, vous avez terminé tous les exercices.
+                </p>
+              </div>
+              
+              <div className="space-y-3 mb-6">
+                <label htmlFor="commentaire-fin" className="block text-sm font-medium">
+                  Commentaire de fin de séance
+                </label>
+                <p className="text-sm text-muted-foreground">
+                  Dis-moi comment s'est passée ta séance et comment tu t'es senti.e ! Ça me permettra d'adapter au mieux les prochaines séances.
+                </p>
+                <textarea
+                  id="commentaire-fin"
+                  value={commentaireFin}
+                  onChange={(e) => setCommentaireFin(e.target.value)}
+                  className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Partage ton ressenti sur la séance..."
+                />
+              </div>
+
+              <div className="text-center">
+                <Button onClick={completeSession} size="lg" className="bg-gradient-primary">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Confirmer la fin de séance
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

@@ -378,6 +378,7 @@ export type Database = {
       session: {
         Row: {
           client_id: string | null
+          commentaire_fin: string | null
           created_at: string | null
           date_demarree: string | null
           date_terminee: string | null
@@ -390,6 +391,7 @@ export type Database = {
         }
         Insert: {
           client_id?: string | null
+          commentaire_fin?: string | null
           created_at?: string | null
           date_demarree?: string | null
           date_terminee?: string | null
@@ -402,6 +404,7 @@ export type Database = {
         }
         Update: {
           client_id?: string | null
+          commentaire_fin?: string | null
           created_at?: string | null
           date_demarree?: string | null
           date_terminee?: string | null
