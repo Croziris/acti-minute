@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ClientLayout } from '@/components/layout/ClientLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { SessionTimer } from '@/components/session/SessionTimer';
-import { ExerciseCard } from '@/components/session/ExerciseCard';
-import { CircuitTrainingView } from '@/components/client/CircuitTrainingView';
-import { useSessionData } from '@/hooks/useSessionData';
-import { useOfflineSync } from '@/hooks/useOfflineSync';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
-import { CheckCircle, Clock, AlertCircle, ArrowLeft, MessageCircle } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { ClientLayout } from "@/components/layout/ClientLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { SessionTimer } from "@/components/session/SessionTimer";
+import { ExerciseCard } from "@/components/session/ExerciseCard";
+import { CircuitTrainingView } from "@/components/client/CircuitTrainingView";
+import { useSessionData } from "@/hooks/useSessionData";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+import { CheckCircle, Clock, AlertCircle, ArrowLeft, MessageCircle } from "lucide-react";
 
 const ClientSession = () => {
   const { sessionId } = useParams();
@@ -23,13 +23,13 @@ const ClientSession = () => {
   const [sessionStarted, setSessionStarted] = useState(false);
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set());
   const [sessionCompleted, setSessionCompleted] = useState(false);
-  const [commentaireFin, setCommentaireFin] = useState('');
+  const [commentaireFin, setCommentaireFin] = useState("");
 
   useEffect(() => {
-    if (session?.statut === 'ongoing') {
+    if (session?.statut === "ongoing") {
       setSessionStarted(true);
     }
-    if (session?.statut === 'done') {
+    if (session?.statut === "done") {
       setSessionCompleted(true);
     }
   }, [session]);
@@ -39,34 +39,33 @@ const ClientSession = () => {
 
     try {
       const updateData = {
-        statut: 'ongoing',
-        date_demarree: new Date().toISOString()
+        statut: "ongoing",
+        date_demarree: new Date().toISOString(),
       };
 
       if (isOnline) {
         const { error } = await supabase
-          .from('session')
+          .from("session")
           .update(updateData)
-          .eq('id', session.id)
-          .eq('client_id', user.id);
+          .eq("id", session.id)
+          .eq("client_id", user.id);
 
         if (error) throw error;
       } else {
-        addOfflineData('session_update', {
+        addOfflineData("session_update", {
           sessionId: session.id,
-          updates: updateData
+          updates: updateData,
         });
       }
 
       setSessionStarted(true);
-      
+
       toast({
         title: "Séance démarrée",
         description: "Bon entraînement !",
       });
-
     } catch (error) {
-      console.error('Error starting session:', error);
+      console.error("Error starting session:", error);
       toast({
         title: "Erreur",
         description: "Impossible de démarrer la séance",
@@ -80,35 +79,34 @@ const ClientSession = () => {
 
     try {
       const updateData = {
-        statut: 'done',
+        statut: "done",
         date_terminee: new Date().toISOString(),
-        commentaire_fin: commentaireFin || null
+        commentaire_fin: commentaireFin || null,
       };
 
       if (isOnline) {
         const { error } = await supabase
-          .from('session')
+          .from("session")
           .update(updateData)
-          .eq('id', session.id)
-          .eq('client_id', user.id);
+          .eq("id", session.id)
+          .eq("client_id", user.id);
 
         if (error) throw error;
       } else {
-        addOfflineData('session_update', {
+        addOfflineData("session_update", {
           sessionId: session.id,
-          updates: updateData
+          updates: updateData,
         });
       }
 
       setSessionCompleted(true);
-      
+
       toast({
         title: "Séance terminée",
         description: "Félicitations ! Séance complétée avec succès.",
       });
-
     } catch (error) {
-      console.error('Error completing session:', error);
+      console.error("Error completing session:", error);
       toast({
         title: "Erreur",
         description: "Impossible de terminer la séance",
@@ -118,22 +116,22 @@ const ClientSession = () => {
   };
 
   const handleExerciseComplete = (exerciseId: string) => {
-    setCompletedExercises(prev => new Set(prev).add(exerciseId));
+    setCompletedExercises((prev) => new Set(prev).add(exerciseId));
   };
 
   const handleRoundComplete = async (roundNumber: number) => {
     if (!session || !user) return;
-    
+
     // Pour circuit training, on peut logger le tour complété
     toast({
       title: `Tour ${roundNumber} terminé`,
-      description: `Encore ${session.workout.circuit_rounds! - roundNumber} tour(s) !`
+      description: `Encore ${session.workout.circuit_rounds! - roundNumber} tour(s) !`,
     });
   };
 
   const handleCircuitComplete = () => {
     // Marquer tous les exercices comme complétés
-    const allExerciseIds = exercises.map(e => e.exercise.id);
+    const allExerciseIds = exercises.map((e) => e.exercise.id);
     setCompletedExercises(new Set(allExerciseIds));
   };
 
@@ -158,9 +156,9 @@ const ClientSession = () => {
             <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
             <h2 className="text-xl font-semibold mb-2">Séance introuvable</h2>
             <p className="text-muted-foreground mb-4">
-              {error || 'Cette séance n\'existe pas ou vous n\'y avez pas accès.'}
+              {error || "Cette séance n'existe pas ou vous n'y avez pas accès."}
             </p>
-            <Button onClick={() => navigate('/client/home')}>
+            <Button onClick={() => navigate("/client/home")}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Retour à l'accueil
             </Button>
@@ -171,7 +169,7 @@ const ClientSession = () => {
   }
 
   const exercises = session.workout?.workout_exercise || [];
-  const isCircuitWorkout = session.workout?.workout_type === 'circuit';
+  const isCircuitWorkout = session.workout?.workout_type === "circuit";
   const completionRate = exercises.length > 0 ? (completedExercises.size / exercises.length) * 100 : 0;
   const canComplete = completionRate >= 100 || completedExercises.size === exercises.length;
 
@@ -182,37 +180,25 @@ const ClientSession = () => {
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center space-x-2 mb-2">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => navigate('/client/home')}
-              >
+              <Button variant="ghost" size="sm" onClick={() => navigate("/client/home")}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Retour
               </Button>
-              <Badge 
-                variant={session.statut === 'done' ? 'default' : 
-                         session.statut === 'ongoing' ? 'secondary' : 'outline'}
+              <Badge
+                variant={session.statut === "done" ? "default" : session.statut === "ongoing" ? "secondary" : "outline"}
               >
-                {session.statut === 'done' ? 'Terminée' :
-                 session.statut === 'ongoing' ? 'En cours' : 'À faire'}
+                {session.statut === "done" ? "Terminée" : session.statut === "ongoing" ? "En cours" : "À faire"}
               </Badge>
             </div>
-            <h1 className="text-2xl font-bold">
-              {session.workout?.titre || `Séance ${session.index_num}`}
-            </h1>
+            <h1 className="text-2xl font-bold">{session.workout?.titre || `Séance ${session.index_num}`}</h1>
             {session.workout?.description && (
-              <p className="text-muted-foreground mt-1">
-                {session.workout.description}
-              </p>
+              <p className="text-muted-foreground mt-1">{session.workout.description}</p>
             )}
           </div>
         </div>
 
         {/* Session Timer */}
-        {sessionStarted && !sessionCompleted && (
-          <SessionTimer autoStart />
-        )}
+        {sessionStarted && !sessionCompleted && <SessionTimer autoStart />}
 
         {/* Progress */}
         {exercises.length > 0 && (
@@ -225,7 +211,7 @@ const ClientSession = () => {
                 </span>
               </div>
               <div className="w-full bg-muted rounded-full h-2">
-                <div 
+                <div
                   className="bg-primary h-2 rounded-full transition-all duration-300"
                   style={{ width: `${completionRate}%` }}
                 />
@@ -235,25 +221,21 @@ const ClientSession = () => {
         )}
 
         {/* Start Session Button */}
-        {!sessionStarted && session.statut === 'planned' && (
+        {!sessionStarted && session.statut === "planned" && (
           <Card>
             <CardContent className="p-6">
               <div className="text-center mb-6">
                 <Clock className="h-12 w-12 mx-auto mb-4 text-primary" />
                 <h3 className="text-lg font-semibold mb-2">Prêt à commencer ?</h3>
                 <p className="text-muted-foreground mb-4">
-                  {session.workout?.duree_estimee && 
-                    `Durée estimée: ${session.workout.duree_estimee} minutes`
-                  }
+                  {session.workout?.duree_estimee && `Durée estimée: ${session.workout.duree_estimee} minutes`}
                 </p>
               </div>
 
               {/* Exercise Preview */}
               {exercises.length > 0 && (
                 <div className="mb-6 p-4 bg-muted/30 rounded-lg">
-                  <p className="text-sm font-medium mb-3">
-                    Voici les exercices de ta séance d'aujourd'hui :
-                  </p>
+                  <p className="text-sm font-medium mb-3">Voici les exercices de ta séance d'aujourd'hui :</p>
                   <ul className="space-y-2">
                     {exercises.map((we, index) => (
                       <li key={we.id} className="text-sm flex items-start gap-2">
@@ -283,8 +265,9 @@ const ClientSession = () => {
         )}
 
         {/* Exercises - Mode Circuit ou Classique */}
-        {sessionStarted && exercises.length > 0 && (
-          isCircuitWorkout ? (
+        {sessionStarted &&
+          exercises.length > 0 &&
+          (isCircuitWorkout ? (
             <CircuitTrainingView
               exercises={exercises}
               circuitRounds={session.workout.circuit_rounds || 3}
@@ -310,8 +293,7 @@ const ClientSession = () => {
                 />
               ))}
             </div>
-          )
-        )}
+          ))}
 
         {/* Complete Session */}
         {sessionStarted && !sessionCompleted && canComplete && (
@@ -320,24 +302,23 @@ const ClientSession = () => {
               <div className="text-center mb-6">
                 <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-600" />
                 <h3 className="text-lg font-semibold mb-2">Séance terminée !</h3>
-                <p className="text-muted-foreground mb-4">
-                  Félicitations, vous avez terminé tous les exercices.
-                </p>
+                <p className="text-muted-foreground mb-4">Félicitations, vous avez terminé tous les exercices.</p>
               </div>
-              
+
               <div className="space-y-3 mb-6">
                 <label htmlFor="commentaire-fin" className="block text-sm font-medium">
                   Commentaire de fin de séance
                 </label>
                 <p className="text-sm text-muted-foreground">
-                  Dis-moi comment s'est passée ta séance et comment tu t'es senti.e ! Ça me permettra d'adapter au mieux les prochaines séances.
+                  Dis-moi comment s'est passée ta séance et comment tu t'es senti.e ! Ça me permettra d'adapter au mieux
+                  les prochaines séances.
                 </p>
                 <textarea
                   id="commentaire-fin"
                   value={commentaireFin}
                   onChange={(e) => setCommentaireFin(e.target.value)}
                   className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Partage ton ressenti sur la séance..."
+                  placeholder="Partage ton ressenti sur la séance... exemple : j'ai eu une gène ici, j'ai bien aimé ça, ça c'était trop facile, ça trop difficile..."
                 />
               </div>
 
@@ -352,21 +333,19 @@ const ClientSession = () => {
         )}
 
         {/* WhatsApp Link */}
-        {(sessionCompleted || session.statut === 'done') && (
+        {(sessionCompleted || session.statut === "done") && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Partage ton feedback</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-muted-foreground">
-                Envoie une preuve de séance à ton coach et partage ton feedback !
-              </p>
+              <p className="text-muted-foreground">Envoie une preuve de séance à ton coach et partage ton feedback !</p>
               <Button
                 onClick={() => {
                   const message = encodeURIComponent(
-                    "Voici ma preuve de séance et mon feedback :\n\n[Ajoute ici ta photo ou vidéo et ton ressenti sur la séance]"
+                    "Voici ma preuve de séance et mon feedback :\n\n[Ajoute ici ta photo ou vidéo et ton ressenti sur la séance]",
                   );
-                  window.open(`https://wa.me/?text=${message}`, '_blank');
+                  window.open(`https://wa.me/?text=${message}`, "_blank");
                 }}
                 className="w-full bg-gradient-primary"
               >
@@ -383,9 +362,7 @@ const ClientSession = () => {
             <CardContent className="p-8 text-center">
               <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="font-medium mb-2">Aucun exercice programmé</h3>
-              <p className="text-sm text-muted-foreground">
-                Cette séance ne contient pas encore d'exercices.
-              </p>
+              <p className="text-sm text-muted-foreground">Cette séance ne contient pas encore d'exercices.</p>
             </CardContent>
           </Card>
         )}
