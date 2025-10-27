@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ProgramBuilder } from '@/components/coach/ProgramBuilder';
 import { HabitManager } from '@/components/coach/HabitManager';
+import { ClientRoutineManager } from '@/components/coach/ClientRoutineManager';
 
 const CoachClient = () => {
   const { id } = useParams();
@@ -91,15 +92,19 @@ const CoachClient = () => {
 
         {program ? (
           <Tabs defaultValue="workouts" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="workouts">Séances</TabsTrigger>
               <TabsTrigger value="habits">Habitudes</TabsTrigger>
+              <TabsTrigger value="routines">Routines</TabsTrigger>
             </TabsList>
             <TabsContent value="workouts" className="mt-6">
               <ProgramBuilder programId={program.id} clientId={id!} />
             </TabsContent>
             <TabsContent value="habits" className="mt-6">
               <HabitManager clientId={id!} />
+            </TabsContent>
+            <TabsContent value="routines" className="mt-6">
+              <ClientRoutineManager clientId={id!} />
             </TabsContent>
           </Tabs>
         ) : (
