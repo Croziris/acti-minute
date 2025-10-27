@@ -6,6 +6,7 @@ import { Check, Calendar, Play } from 'lucide-react';
 import { useRoutines, Routine } from '@/hooks/useRoutines';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { extractYouTubeVideoId, getYouTubeEmbedUrl, isYouTubeShort } from '@/lib/utils';
 
 const DAYS_FR = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
@@ -222,13 +223,15 @@ export const RoutineTracker: React.FC = () => {
                 )}
 
                 {selectedRoutine.type === 'video' && selectedRoutine.video_url && (
-                  <div className="aspect-video">
-                    <iframe
-                      src={selectedRoutine.video_url.replace('watch?v=', 'embed/')}
-                      className="w-full h-full rounded-lg"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
+                  <div className={isYouTubeShort(selectedRoutine.video_url) ? 'aspect-[9/16] max-w-md mx-auto' : 'aspect-video'}>
+                    {extractYouTubeVideoId(selectedRoutine.video_url) && (
+                      <iframe
+                        src={getYouTubeEmbedUrl(extractYouTubeVideoId(selectedRoutine.video_url)!, isYouTubeShort(selectedRoutine.video_url))}
+                        className="w-full h-full rounded-lg"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    )}
                   </div>
                 )}
 
