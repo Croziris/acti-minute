@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Circle } from 'lucide-react';
+import { CheckCircle2, Circle, History } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Calendar } from '@/components/ui/calendar';
 
 interface RoutineWithTracking {
   id: string;
@@ -27,6 +30,8 @@ export const ClientRoutineStats: React.FC<ClientRoutineStatsProps> = ({ clientId
   const [routines, setRoutines] = useState<RoutineWithTracking[]>([]);
   const [loading, setLoading] = useState(true);
   const [weekDates, setWeekDates] = useState<string[]>([]);
+  const [selectedRoutineHistory, setSelectedRoutineHistory] = useState<string | null>(null);
+  const [historyDates, setHistoryDates] = useState<Date[]>([]);
 
   useEffect(() => {
     const dates = getCurrentWeekDates();
@@ -152,6 +157,27 @@ export const ClientRoutineStats: React.FC<ClientRoutineStatsProps> = ({ clientId
     return total;
   };
 
+  const fetchRoutineHistory = async (routineId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('routine_tracking')
+        .select('date')
+        .eq('client_id', clientId)
+        .eq('routine_id', routineId)
+        .eq('completed', true)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+
+      const dates = data?.map(item => new Date(item.date)) || [];
+      setHistoryDates(dates);
+      setSelectedRoutineHistory(routineId);
+    } catch (err: any) {
+      console.error('Error fetching routine history:', err);
+      toast.error('Erreur lors du chargement de l\'historique');
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -238,7 +264,50 @@ export const ClientRoutineStats: React.FC<ClientRoutineStatsProps> = ({ clientId
                 {routines.map(routine => (
                   <tr key={routine.id} className="border-b hover:bg-muted/50 transition-colors">
                     <td className="py-3 px-4">
-                      <div className="font-medium">{routine.title}</div>
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium">{routine.title}</div>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => fetchRoutineHistory(routine.id)}
+                              className="ml-2"
+                            >
+                              <History className="h-4 w-4 mr-1" />
+                              Historique
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl">
+                            <DialogHeader>
+                              <DialogTitle>Historique - {routine.title}</DialogTitle>
+                              <DialogDescription>
+                                Tous les jours où cette routine a été validée par le client
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="flex flex-col items-center py-4">
+                              <Calendar
+                                mode="multiple"
+                                selected={historyDates}
+                                className="rounded-md border pointer-events-auto"
+                                modifiers={{
+                                  completed: historyDates
+                                }}
+                                modifiersStyles={{
+                                  completed: {
+                                    backgroundColor: 'hsl(var(--success))',
+                                    color: 'white',
+                                    fontWeight: 'bold'
+                                  }
+                                }}
+                              />
+                              <p className="text-sm text-muted-foreground mt-4">
+                                Total : {historyDates.length} jour{historyDates.length > 1 ? 's' : ''} validé{historyDates.length > 1 ? 's' : ''}
+                              </p>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                     </td>
                     {weekDates.map((date, index) => (
                       <td key={index} className="text-center py-3 px-2">
