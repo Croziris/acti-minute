@@ -3,13 +3,15 @@ import { CoachLayout } from '@/components/layout/CoachLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Play } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { CreateRoutineDialog } from '@/components/coach/CreateRoutineDialog';
 import { AssignRoutinesDialog } from '@/components/coach/AssignRoutinesDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { extractYouTubeVideoId, getYouTubeEmbedUrl } from '@/lib/utils';
 
 interface Routine {
   id: string;
@@ -31,6 +33,8 @@ const CoachRoutines = () => {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [routineToDelete, setRoutineToDelete] = useState<string | null>(null);
+  const [videoDialogOpen, setVideoDialogOpen] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
   const fetchRoutines = async () => {
     if (!user) return;
@@ -180,6 +184,18 @@ const CoachRoutines = () => {
                     </p>
                   )}
                   <div className="flex gap-2">
+                    {routine.type === 'video' && routine.video_url && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedVideo(routine.video_url);
+                          setVideoDialogOpen(true);
+                        }}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -244,6 +260,25 @@ const CoachRoutines = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={videoDialogOpen} onOpenChange={setVideoDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Vidéo de la routine</DialogTitle>
+          </DialogHeader>
+          <div className="aspect-video w-full">
+            {selectedVideo && extractYouTubeVideoId(selectedVideo) && (
+              <iframe
+                className="w-full h-full rounded-lg"
+                src={getYouTubeEmbedUrl(extractYouTubeVideoId(selectedVideo)!)}
+                title="Routine video"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </CoachLayout>
   );
 };
