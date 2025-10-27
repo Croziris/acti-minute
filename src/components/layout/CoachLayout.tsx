@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, Users, Settings, LogOut, Dumbbell, ClipboardList, Library } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, LogOut, Dumbbell, ClipboardList, Library, Activity } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CoachBottomNav } from '@/components/coach/CoachBottomNav';
 import { CoachMobileHeader } from '@/components/coach/CoachMobileHeader';
@@ -85,6 +85,17 @@ export const CoachLayout: React.FC<CoachLayoutProps> = ({ children }) => {
             >
               <Library className="h-5 w-5 mr-3" />
               Banque d'exercices
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/coach/routines')}
+              className={`w-full justify-start text-nav-foreground hover:bg-white/10 ${
+                isActive('/coach/routines') ? 'bg-nav-active text-white' : ''
+              }`}
+            >
+              <Activity className="h-5 w-5 mr-3" />
+              Mes Routines
             </Button>
           </div>
         </nav>

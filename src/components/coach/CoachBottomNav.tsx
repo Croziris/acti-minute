@@ -1,4 +1,4 @@
-import { Home, Users, Dumbbell, BookOpen } from 'lucide-react';
+import { Home, Users, Dumbbell, Activity } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -9,7 +9,7 @@ export const CoachBottomNav = () => {
     { to: '/coach/dashboard', icon: Home, label: 'Dashboard', exactMatch: true },
     { to: '/coach/clients', icon: Users, label: 'Clients', exactMatch: false },
     { to: '/coach/workouts', icon: Dumbbell, label: 'Séances', exactMatch: false },
-    { to: '/coach/exercises', icon: BookOpen, label: 'Exercices', exactMatch: false },
+    { to: '/coach/routines', icon: Activity, label: 'Routines', exactMatch: false },
   ];
   
   return (

@@ -10,6 +10,7 @@ import AuthPage from "@/pages/AuthPage";
 import ClientHome from "@/pages/client/ClientHome";
 import ClientSession from "@/pages/client/ClientSession";
 import ClientHabits from "@/pages/client/ClientHabits";
+import ClientRoutines from "@/pages/client/ClientRoutines";
 import ClientArticles from "@/pages/client/ClientArticles";
 import ClientArticle from "@/pages/client/ClientArticle";
 import CoachDashboard from "@/pages/coach/CoachDashboard";
@@ -18,6 +19,7 @@ import CoachClient from "@/pages/coach/CoachClient";
 import CoachBuilder from "@/pages/coach/CoachBuilder";
 import CoachWorkouts from "@/pages/coach/CoachWorkouts";
 import CoachExercises from "@/pages/coach/CoachExercises";
+import CoachRoutines from "@/pages/coach/CoachRoutines";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +50,11 @@ const App = () => (
             <Route path="/client/habits" element={
               <ProtectedRoute allowedRoles={["spotif.ve"]}>
                 <ClientHabits />
+              </ProtectedRoute>
+            } />
+            <Route path="/client/routines" element={
+              <ProtectedRoute allowedRoles={["spotif.ve"]}>
+                <ClientRoutines />
               </ProtectedRoute>
             } />
             <Route path="/client/articles" element={
@@ -90,6 +97,11 @@ const App = () => (
             <Route path="/coach/exercises" element={
               <ProtectedRoute allowedRoles={["coach"]}>
                 <CoachExercises />
+              </ProtectedRoute>
+            } />
+            <Route path="/coach/routines" element={
+              <ProtectedRoute allowedRoles={["coach"]}>
+                <CoachRoutines />
               </ProtectedRoute>
             } />
 

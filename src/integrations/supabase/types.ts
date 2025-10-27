@@ -88,6 +88,55 @@ export type Database = {
         }
         Relationships: []
       }
+      client_routines: {
+        Row: {
+          active: boolean | null
+          assigned_by: string
+          client_id: string
+          created_at: string | null
+          id: string
+          routine_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          assigned_by: string
+          client_id: string
+          created_at?: string | null
+          id?: string
+          routine_id: string
+        }
+        Update: {
+          active?: boolean | null
+          assigned_by?: string
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          routine_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_routines_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "app_user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_routines_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "app_user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_routines_routine_id_fkey"
+            columns: ["routine_id"]
+            isOneToOne: false
+            referencedRelation: "routines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credential: {
         Row: {
           created_at: string | null
@@ -368,6 +417,131 @@ export type Database = {
           },
           {
             foreignKeyName: "program_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "app_user"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routine_exercises: {
+        Row: {
+          created_at: string | null
+          exercise_id: string
+          id: string
+          order_index: number
+          repetitions: number | null
+          routine_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          exercise_id: string
+          id?: string
+          order_index?: number
+          repetitions?: number | null
+          routine_id: string
+        }
+        Update: {
+          created_at?: string | null
+          exercise_id?: string
+          id?: string
+          order_index?: number
+          repetitions?: number | null
+          routine_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_exercises_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercise"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routine_exercises_routine_id_fkey"
+            columns: ["routine_id"]
+            isOneToOne: false
+            referencedRelation: "routines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routine_tracking: {
+        Row: {
+          client_id: string
+          completed: boolean | null
+          created_at: string | null
+          date: string
+          id: string
+          routine_id: string
+        }
+        Insert: {
+          client_id: string
+          completed?: boolean | null
+          created_at?: string | null
+          date: string
+          id?: string
+          routine_id: string
+        }
+        Update: {
+          client_id?: string
+          completed?: boolean | null
+          created_at?: string | null
+          date?: string
+          id?: string
+          routine_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_tracking_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "app_user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routine_tracking_routine_id_fkey"
+            columns: ["routine_id"]
+            isOneToOne: false
+            referencedRelation: "routines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routines: {
+        Row: {
+          coach_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          tips: Json | null
+          title: string
+          type: Database["public"]["Enums"]["routine_type"]
+          video_url: string | null
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          tips?: Json | null
+          title: string
+          type?: Database["public"]["Enums"]["routine_type"]
+          video_url?: string | null
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          tips?: Json | null
+          title?: string
+          type?: Database["public"]["Enums"]["routine_type"]
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routines_coach_id_fkey"
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "app_user"
@@ -662,21 +836,12 @@ export type Database = {
         Args: { p_credential_id: string; p_email: string; p_password: string }
         Returns: string
       }
-      get_app_user_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      is_client: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_coach: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      get_app_user_id: { Args: never; Returns: string }
+      is_client: { Args: never; Returns: boolean }
+      is_coach: { Args: never; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      routine_type: "exercises" | "video"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -803,6 +968,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      routine_type: ["exercises", "video"],
+    },
   },
 } as const

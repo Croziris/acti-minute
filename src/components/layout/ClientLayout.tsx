@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Home, Calendar, BookOpen, LogOut, Dumbbell } from 'lucide-react';
+import { Home, Calendar, BookOpen, LogOut, Dumbbell, Activity } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 interface ClientLayoutProps {
@@ -73,6 +73,18 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
           >
             <Calendar className="h-6 w-6 shrink-0" />
             <span className="text-xs font-medium">Habitudes</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/client/routines')}
+            className={`flex flex-col items-center gap-1 px-3 py-2 h-auto min-h-[56px] rounded-xl transition-all duration-200 hover:bg-primary/5 ${
+              isActive('/client/routines') ? 'text-primary' : 'text-muted-foreground'
+            }`}
+          >
+            <Activity className="h-6 w-6 shrink-0" />
+            <span className="text-xs font-medium">Routines</span>
           </Button>
 
           <Button
