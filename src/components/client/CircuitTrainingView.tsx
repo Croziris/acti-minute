@@ -110,17 +110,34 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
     if (!allLogged) {
       toast({
         title: "Exercices incomplets",
-        description: "Complétez tous les exercices avant de valider le tour",
+        description: "Ajoutez vos répétitions pour continuer",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Sauvegarder tous les logs du tour en base de données
+    try {
+      const logsToSave = currentCircuitExercises.map(ex => ({
+        session_id: sessionId,
+        exercise_id: ex.exercise_id,
+        index_serie: globalTour,
+        reps: ex.reps || 0,
+        charge: ex.charge_cible || null,
+      }));
+      
+      await supabase.from('set_log').insert(logsToSave);
+    } catch (error) {
+      console.error('Error saving logs:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder les données",
         variant: "destructive"
       });
       return;
     }
     
     onRoundComplete(globalTour);
-    setCompletedRoundsByCircuit(prev => ({
-      ...prev,
-      [currentCircuitNumber]: currentRoundInCircuit
-    }));
 
     // CAS 1 : Pas le dernier tour de ce circuit
     if (currentRoundInCircuit < config.rounds) {
@@ -133,11 +150,13 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
           if (prev <= 1) {
             clearInterval(interval);
             setRestingCircuit(null);
-            // Passer au tour suivant
-            setCompletedRoundsByCircuit(prev => ({
-              ...prev,
+            // IMPORTANT : Passer au tour suivant
+            setCompletedRoundsByCircuit(prevCompleted => ({
+              ...prevCompleted,
               [currentCircuitNumber]: currentRoundInCircuit
             }));
+            // Reset des exercices loggés pour le nouveau tour
+            setLoggedExercises(new Set());
             return 0;
           }
           return prev - 1;

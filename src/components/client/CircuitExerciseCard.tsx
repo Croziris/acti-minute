@@ -5,8 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Play, Plus, Minus, CheckCircle } from 'lucide-react';
 import { getYouTubeEmbedUrl, isYouTubeShort } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
 
 interface Exercise {
   exercise_id: string;
@@ -46,44 +44,25 @@ export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({
   const [showVideo, setShowVideo] = useState(false);
   const [repsCompleted, setRepsCompleted] = useState<number>(we.reps || 0);
   const [charge, setCharge] = useState<number>(we.charge_cible || 0);
-  const [isLogging, setIsLogging] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
+  const [hasLogged, setHasLogged] = useState(false);
   const isShort = we.exercise?.youtube_url ? isYouTubeShort(we.exercise.youtube_url) : false;
 
-  const handleLogSet = async () => {
-    setIsLogging(true);
-    try {
-      const { error } = await supabase.from('set_log').insert({
-        session_id: sessionId,
-        exercise_id: we.exercise_id,
-        index_serie: roundNumber,
-        reps: repsCompleted,
-        charge: charge || null,
-      });
-
-      if (error) throw error;
-
-      setIsCompleted(true);
+  // Enregistrement automatique dès qu'on a des reps
+  const handleRepsChange = async (newReps: number) => {
+    setRepsCompleted(newReps);
+    
+    if (newReps > 0 && !hasLogged) {
+      setHasLogged(true);
       onExerciseLogged(we.exercise_id, roundNumber);
-      
-      toast({
-        title: "Exercice enregistré",
-        description: `${repsCompleted} reps pour ${we.exercise.libelle}`,
-      });
-    } catch (error) {
-      console.error('Error logging set:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'enregistrer l'exercice",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLogging(false);
     }
   };
 
+  const handleChargeChange = (newCharge: number) => {
+    setCharge(newCharge);
+  };
+
   return (
-    <Card className={`w-full ${isCompleted ? 'opacity-60 bg-muted/50' : ''}`}>
+    <Card className="w-full">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3 flex-1">
@@ -159,69 +138,58 @@ export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({
             )}
           </div>
 
-          {/* Logging Controls - Visible uniquement si non complété */}
-          {!isCompleted && (
-            <div className="pt-3 border-t border-border space-y-3">
-              <div className="text-sm font-medium text-center">Tour {roundNumber}</div>
-              
-              {we.reps && (
-                <div className="space-y-2">
-                  <label className="text-xs text-muted-foreground">Répétitions réalisées</label>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setRepsCompleted(Math.max(0, repsCompleted - 1))}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <Input
-                      type="number"
-                      value={repsCompleted}
-                      onChange={(e) => setRepsCompleted(parseInt(e.target.value) || 0)}
-                      className="text-center"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setRepsCompleted(repsCompleted + 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {we.charge_cible && (
-                <div className="space-y-2">
-                  <label className="text-xs text-muted-foreground">Charge utilisée (kg)</label>
+          {/* Logging Controls */}
+          <div className="pt-3 border-t border-border space-y-3">
+            <div className="text-sm font-medium text-center">Tour {roundNumber}</div>
+            
+            {we.reps && (
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground">Répétitions réalisées</label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRepsChange(Math.max(0, repsCompleted - 1))}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
                   <Input
                     type="number"
-                    value={charge}
-                    onChange={(e) => setCharge(parseFloat(e.target.value) || 0)}
+                    value={repsCompleted}
+                    onChange={(e) => handleRepsChange(parseInt(e.target.value) || 0)}
                     className="text-center"
-                    step="0.5"
                   />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRepsChange(repsCompleted + 1)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
+              </div>
+            )}
 
-              <Button
-                onClick={handleLogSet}
-                disabled={isLogging || repsCompleted === 0}
-                className="w-full"
-                size="sm"
-                variant="secondary"
-              >
-                {isLogging ? 'Enregistrement...' : 'Enregistrer'}
-              </Button>
-            </div>
-          )}
+            {we.charge_cible && (
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground">Charge utilisée (kg)</label>
+                <Input
+                  type="number"
+                  value={charge}
+                  onChange={(e) => handleChargeChange(parseFloat(e.target.value) || 0)}
+                  className="text-center"
+                  step="0.5"
+                />
+              </div>
+            )}
 
-          {isCompleted && (
-            <div className="pt-3 border-t border-border text-center">
-              <div className="text-sm font-medium text-green-600">✓ Exercice complété</div>
-            </div>
-          )}
+            {hasLogged && (
+              <div className="text-center">
+                <CheckCircle className="h-5 w-5 mx-auto text-green-600" />
+                <div className="text-xs text-muted-foreground mt-1">Prêt pour validation</div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Couleur élastique */}
