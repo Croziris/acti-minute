@@ -79,8 +79,8 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
   const [sessionPlaisir, setSessionPlaisir] = useState(5);
   const [sessionComment, setSessionComment] = useState('');
   
-  // État pour tracker les exercices loggés
-  const [loggedExercises, setLoggedExercises] = useState<Set<string>>(new Set());
+  // Stocker les données de tous les exercices par circuit et tour
+  const [exerciseData, setExerciseData] = useState<Record<string, { reps: number; charge: number }>>({});
 
   // Grouper les exercices par circuit
   const exercisesByCircuit = exercises.reduce((acc, exercise) => {
@@ -98,35 +98,37 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
     return { rounds: circuitRounds, rest: restTime };
   };
 
+  const handleExerciseDataChange = (exerciseId: string, data: { reps: number; charge: number }) => {
+    setExerciseData(prev => ({
+      ...prev,
+      [exerciseId]: data
+    }));
+  };
+
   const handleValidateTour = async () => {
     const config = getCircuitConfig(currentCircuitNumber);
     const globalTour = calculateGlobalTourNumber(currentCircuitIndex, currentRoundInCircuit);
     
-    // Vérifier que tous les exercices ont des logs
-    const allLogged = currentCircuitExercises.every(ex => 
-      loggedExercises.has(`${ex.exercise_id}-${globalTour}`)
-    );
-    
-    if (!allLogged) {
-      toast({
-        title: "Exercices incomplets",
-        description: "Ajoutez vos répétitions pour continuer",
-        variant: "destructive"
-      });
-      return;
-    }
-
     // Sauvegarder tous les logs du tour en base de données
     try {
-      const logsToSave = currentCircuitExercises.map(ex => ({
-        session_id: sessionId,
-        exercise_id: ex.exercise_id,
-        index_serie: globalTour,
-        reps: ex.reps || 0,
-        charge: ex.charge_cible || null,
-      }));
+      const logsToSave = currentCircuitExercises.map(ex => {
+        const data = exerciseData[ex.exercise_id] || { reps: ex.reps || 0, charge: ex.charge_cible || 0 };
+        return {
+          session_id: sessionId,
+          exercise_id: ex.exercise_id,
+          index_serie: globalTour,
+          reps: data.reps,
+          charge: data.charge || null,
+        };
+      });
       
-      await supabase.from('set_log').insert(logsToSave);
+      const { error } = await supabase.from('set_log').insert(logsToSave);
+      if (error) throw error;
+
+      toast({
+        title: "Tour enregistré",
+        description: `Tour ${currentRoundInCircuit}/${config.rounds} validé`,
+      });
     } catch (error) {
       console.error('Error saving logs:', error);
       toast({
@@ -139,6 +141,12 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
     
     onRoundComplete(globalTour);
 
+    // Mettre à jour l'état des tours complétés
+    setCompletedRoundsByCircuit(prev => ({
+      ...prev,
+      [currentCircuitNumber]: currentRoundInCircuit
+    }));
+
     // CAS 1 : Pas le dernier tour de ce circuit
     if (currentRoundInCircuit < config.rounds) {
       // Démarrer le repos entre tours
@@ -150,13 +158,6 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
           if (prev <= 1) {
             clearInterval(interval);
             setRestingCircuit(null);
-            // IMPORTANT : Passer au tour suivant
-            setCompletedRoundsByCircuit(prevCompleted => ({
-              ...prevCompleted,
-              [currentCircuitNumber]: currentRoundInCircuit
-            }));
-            // Reset des exercices loggés pour le nouveau tour
-            setLoggedExercises(new Set());
             return 0;
           }
           return prev - 1;
@@ -230,11 +231,6 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
   const handleStartNextCircuit = () => {
     setShowTransition(false);
     setCurrentCircuitIndex(prev => prev + 1);
-    setLoggedExercises(new Set()); // Reset des exercices loggés pour le nouveau circuit
-  };
-
-  const handleExerciseLogged = (exerciseId: string, roundNumber: number) => {
-    setLoggedExercises(prev => new Set(prev).add(`${exerciseId}-${roundNumber}`));
   };
 
   // Calculer le numéro de tour global
@@ -263,11 +259,6 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
   const currentCircuitCompletedRounds = completedRoundsByCircuit[currentCircuitNumber] || 0;
   const currentRoundInCircuit = currentCircuitCompletedRounds + 1;
   const globalTourNumber = calculateGlobalTourNumber(currentCircuitIndex, currentRoundInCircuit);
-  
-  // Vérifier si tous les exercices du tour actuel sont loggés
-  const allExercisesLogged = currentCircuitExercises.every(ex => 
-    loggedExercises.has(`${ex.exercise_id}-${globalTourNumber}`)
-  );
 
   return (
     <div className="space-y-6">
@@ -356,7 +347,7 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
                 index={idx}
                 sessionId={sessionId}
                 roundNumber={globalTourNumber}
-                onExerciseLogged={handleExerciseLogged}
+                onExerciseDataChange={handleExerciseDataChange}
               />
             ))}
           </div>
@@ -366,7 +357,7 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
             <CardContent className="pt-6">
               <Button 
                 onClick={handleValidateTour}
-                disabled={!allExercisesLogged || restingCircuit !== null}
+                disabled={restingCircuit !== null}
                 size="lg"
                 className="w-full"
               >
@@ -376,13 +367,13 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
                     {currentRoundInCircuit <= currentCircuitConfig.rounds && " - En cours"}
                   </span>
                   
-                  {allExercisesLogged ? (
+                  {restingCircuit === null ? (
                     <span className="text-sm opacity-90">
                       Appuyer pour finir le tour
                     </span>
                   ) : (
                     <span className="text-sm opacity-75">
-                      Complétez tous les exercices pour continuer
+                      Repos en cours...
                     </span>
                   )}
                 </div>

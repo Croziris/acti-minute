@@ -31,7 +31,7 @@ interface CircuitExerciseCardProps {
   index: number;
   sessionId: string;
   roundNumber: number;
-  onExerciseLogged: (exerciseId: string, roundNumber: number) => void;
+  onExerciseDataChange?: (exerciseId: string, data: { reps: number; charge: number }) => void;
 }
 
 export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({ 
@@ -39,27 +39,22 @@ export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({
   index, 
   sessionId, 
   roundNumber,
-  onExerciseLogged
+  onExerciseDataChange
 }) => {
   const [showVideo, setShowVideo] = useState(false);
   const [repsCompleted, setRepsCompleted] = useState<number>(we.reps || 0);
   const [charge, setCharge] = useState<number>(we.charge_cible || 0);
-  const [hasLogged, setHasLogged] = useState(false);
   const isShort = we.exercise?.youtube_url ? isYouTubeShort(we.exercise.youtube_url) : false;
 
-  // Enregistrement automatique dès qu'on a des reps
-  const handleRepsChange = async (newReps: number) => {
-    setRepsCompleted(newReps);
-    
-    if (newReps > 0 && !hasLogged) {
-      setHasLogged(true);
-      onExerciseLogged(we.exercise_id, roundNumber);
+  // Notifier le parent à chaque changement
+  React.useEffect(() => {
+    if (onExerciseDataChange) {
+      onExerciseDataChange(we.exercise_id, {
+        reps: repsCompleted,
+        charge: charge
+      });
     }
-  };
-
-  const handleChargeChange = (newCharge: number) => {
-    setCharge(newCharge);
-  };
+  }, [repsCompleted, charge, we.exercise_id, onExerciseDataChange]);
 
   return (
     <Card className="w-full">
@@ -149,20 +144,20 @@ export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleRepsChange(Math.max(0, repsCompleted - 1))}
+                    onClick={() => setRepsCompleted(Math.max(0, repsCompleted - 1))}
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
                   <Input
                     type="number"
                     value={repsCompleted}
-                    onChange={(e) => handleRepsChange(parseInt(e.target.value) || 0)}
+                    onChange={(e) => setRepsCompleted(parseInt(e.target.value) || 0)}
                     className="text-center"
                   />
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleRepsChange(repsCompleted + 1)}
+                    onClick={() => setRepsCompleted(repsCompleted + 1)}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -176,19 +171,13 @@ export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({
                 <Input
                   type="number"
                   value={charge}
-                  onChange={(e) => handleChargeChange(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => setCharge(parseFloat(e.target.value) || 0)}
                   className="text-center"
                   step="0.5"
                 />
               </div>
             )}
 
-            {hasLogged && (
-              <div className="text-center">
-                <CheckCircle className="h-5 w-5 mx-auto text-green-600" />
-                <div className="text-xs text-muted-foreground mt-1">Prêt pour validation</div>
-              </div>
-            )}
           </div>
         </div>
 
