@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Play, Plus, Minus } from 'lucide-react';
+import { Play, Plus, Minus, CheckCircle } from 'lucide-react';
 import { getYouTubeEmbedUrl, isYouTubeShort } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -33,13 +33,21 @@ interface CircuitExerciseCardProps {
   index: number;
   sessionId: string;
   roundNumber: number;
+  onExerciseLogged: (exerciseId: string, roundNumber: number) => void;
 }
 
-export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({ exercise: we, index, sessionId, roundNumber }) => {
+export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({ 
+  exercise: we, 
+  index, 
+  sessionId, 
+  roundNumber,
+  onExerciseLogged
+}) => {
   const [showVideo, setShowVideo] = useState(false);
   const [repsCompleted, setRepsCompleted] = useState<number>(we.reps || 0);
   const [charge, setCharge] = useState<number>(we.charge_cible || 0);
   const [isLogging, setIsLogging] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
   const isShort = we.exercise?.youtube_url ? isYouTubeShort(we.exercise.youtube_url) : false;
 
   const handleLogSet = async () => {
@@ -55,15 +63,18 @@ export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({ exerci
 
       if (error) throw error;
 
+      setIsCompleted(true);
+      onExerciseLogged(we.exercise_id, roundNumber);
+      
       toast({
-        title: "Tour enregistré",
-        description: `${repsCompleted} reps enregistrées`,
+        title: "Exercice enregistré",
+        description: `${repsCompleted} reps pour ${we.exercise.libelle}`,
       });
     } catch (error) {
       console.error('Error logging set:', error);
       toast({
         title: "Erreur",
-        description: "Impossible d'enregistrer le tour",
+        description: "Impossible d'enregistrer l'exercice",
         variant: "destructive",
       });
     } finally {
@@ -72,7 +83,7 @@ export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({ exerci
   };
 
   return (
-    <Card className="w-full">
+    <Card className={`w-full ${isCompleted ? 'opacity-60 bg-muted/50' : ''}`}>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3 flex-1">
@@ -148,60 +159,69 @@ export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({ exerci
             )}
           </div>
 
-          {/* Logging Controls */}
-          <div className="pt-3 border-t border-border space-y-3">
-            <div className="text-sm font-medium text-center">Tour {roundNumber}</div>
-            
-            {we.reps && (
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">Répétitions réalisées</label>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setRepsCompleted(Math.max(0, repsCompleted - 1))}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
+          {/* Logging Controls - Visible uniquement si non complété */}
+          {!isCompleted && (
+            <div className="pt-3 border-t border-border space-y-3">
+              <div className="text-sm font-medium text-center">Tour {roundNumber}</div>
+              
+              {we.reps && (
+                <div className="space-y-2">
+                  <label className="text-xs text-muted-foreground">Répétitions réalisées</label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRepsCompleted(Math.max(0, repsCompleted - 1))}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <Input
+                      type="number"
+                      value={repsCompleted}
+                      onChange={(e) => setRepsCompleted(parseInt(e.target.value) || 0)}
+                      className="text-center"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRepsCompleted(repsCompleted + 1)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {we.charge_cible && (
+                <div className="space-y-2">
+                  <label className="text-xs text-muted-foreground">Charge utilisée (kg)</label>
                   <Input
                     type="number"
-                    value={repsCompleted}
-                    onChange={(e) => setRepsCompleted(parseInt(e.target.value) || 0)}
+                    value={charge}
+                    onChange={(e) => setCharge(parseFloat(e.target.value) || 0)}
                     className="text-center"
+                    step="0.5"
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setRepsCompleted(repsCompleted + 1)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
                 </div>
-              </div>
-            )}
+              )}
 
-            {we.charge_cible && (
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">Charge utilisée (kg)</label>
-                <Input
-                  type="number"
-                  value={charge}
-                  onChange={(e) => setCharge(parseFloat(e.target.value) || 0)}
-                  className="text-center"
-                  step="0.5"
-                />
-              </div>
-            )}
+              <Button
+                onClick={handleLogSet}
+                disabled={isLogging || repsCompleted === 0}
+                className="w-full"
+                size="sm"
+                variant="secondary"
+              >
+                {isLogging ? 'Enregistrement...' : 'Enregistrer'}
+              </Button>
+            </div>
+          )}
 
-            <Button
-              onClick={handleLogSet}
-              disabled={isLogging}
-              className="w-full"
-              size="sm"
-            >
-              Valider ce tour
-            </Button>
-          </div>
+          {isCompleted && (
+            <div className="pt-3 border-t border-border text-center">
+              <div className="text-sm font-medium text-green-600">✓ Exercice complété</div>
+            </div>
+          )}
         </div>
 
         {/* Couleur élastique */}

@@ -228,27 +228,36 @@ export type Database = {
       }
       exercise_feedback: {
         Row: {
+          circuit_number: number | null
           created_at: string | null
           difficulte_0_10: number | null
           exercise_id: string | null
+          feedback_type: string | null
           id: string
           plaisir_0_10: number | null
+          rpe: number | null
           session_id: string | null
         }
         Insert: {
+          circuit_number?: number | null
           created_at?: string | null
           difficulte_0_10?: number | null
           exercise_id?: string | null
+          feedback_type?: string | null
           id?: string
           plaisir_0_10?: number | null
+          rpe?: number | null
           session_id?: string | null
         }
         Update: {
+          circuit_number?: number | null
           created_at?: string | null
           difficulte_0_10?: number | null
           exercise_id?: string | null
+          feedback_type?: string | null
           id?: string
           plaisir_0_10?: number | null
+          rpe?: number | null
           session_id?: string | null
         }
         Relationships: [

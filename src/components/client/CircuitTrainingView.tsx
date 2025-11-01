@@ -3,8 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { Textarea } from '@/components/ui/textarea';
 import { Timer, CheckCircle, Dumbbell } from 'lucide-react';
 import { CircuitExerciseCard } from './CircuitExerciseCard';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Exercise {
   exercise_id: string;
@@ -52,12 +58,29 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
   onRoundComplete,
   onAllComplete
 }) => {
+  const { toast } = useToast();
+  
   // États pour gérer les tours et le circuit actif
   const [completedRoundsByCircuit, setCompletedRoundsByCircuit] = useState<Record<number, number>>({});
   const [currentCircuitIndex, setCurrentCircuitIndex] = useState(0);
   const [restingCircuit, setRestingCircuit] = useState<number | null>(null);
   const [restRemaining, setRestRemaining] = useState(0);
   const [showTransition, setShowTransition] = useState(false);
+  
+  // États pour les feedbacks
+  const [showCircuitFeedback, setShowCircuitFeedback] = useState(false);
+  const [showFinalFeedback, setShowFinalFeedback] = useState(false);
+  const [completedCircuitNumber, setCompletedCircuitNumber] = useState(0);
+  const [circuitRPE, setCircuitRPE] = useState(5);
+  const [circuitDifficulte, setCircuitDifficulte] = useState(5);
+  const [circuitPlaisir, setCircuitPlaisir] = useState(5);
+  const [sessionRPE, setSessionRPE] = useState(5);
+  const [sessionDifficulte, setSessionDifficulte] = useState(5);
+  const [sessionPlaisir, setSessionPlaisir] = useState(5);
+  const [sessionComment, setSessionComment] = useState('');
+  
+  // État pour tracker les exercices loggés
+  const [loggedExercises, setLoggedExercises] = useState<Set<string>>(new Set());
 
   // Grouper les exercices par circuit
   const exercisesByCircuit = exercises.reduce((acc, exercise) => {
@@ -75,18 +98,34 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
     return { rounds: circuitRounds, rest: restTime };
   };
 
-  const handleCompleteRound = (circuitNumber: number, roundNumber: number) => {
-    const config = getCircuitConfig(circuitNumber);
+  const handleValidateTour = async () => {
+    const config = getCircuitConfig(currentCircuitNumber);
+    const globalTour = calculateGlobalTourNumber(currentCircuitIndex, currentRoundInCircuit);
     
-    onRoundComplete(roundNumber);
+    // Vérifier que tous les exercices ont des logs
+    const allLogged = currentCircuitExercises.every(ex => 
+      loggedExercises.has(`${ex.exercise_id}-${globalTour}`)
+    );
+    
+    if (!allLogged) {
+      toast({
+        title: "Exercices incomplets",
+        description: "Complétez tous les exercices avant de valider le tour",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    onRoundComplete(globalTour);
     setCompletedRoundsByCircuit(prev => ({
       ...prev,
-      [circuitNumber]: roundNumber
+      [currentCircuitNumber]: currentRoundInCircuit
     }));
 
-    if (roundNumber < config.rounds) {
+    // CAS 1 : Pas le dernier tour de ce circuit
+    if (currentRoundInCircuit < config.rounds) {
       // Démarrer le repos entre tours
-      setRestingCircuit(circuitNumber);
+      setRestingCircuit(currentCircuitNumber);
       setRestRemaining(config.rest);
       
       const interval = setInterval(() => {
@@ -94,26 +133,89 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
           if (prev <= 1) {
             clearInterval(interval);
             setRestingCircuit(null);
+            // Passer au tour suivant
+            setCompletedRoundsByCircuit(prev => ({
+              ...prev,
+              [currentCircuitNumber]: currentRoundInCircuit
+            }));
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
-    } else {
-      // Circuit terminé - vérifier s'il reste des circuits
-      if (currentCircuitIndex < nombreCircuits - 1) {
-        // Afficher la transition vers le prochain circuit
-        setShowTransition(true);
-      } else {
-        // Tous les circuits sont terminés
-        onAllComplete();
-      }
+    } 
+    // CAS 2 : Dernier tour de ce circuit, mais pas le dernier circuit
+    else if (currentCircuitIndex < nombreCircuits - 1) {
+      setCompletedCircuitNumber(currentCircuitNumber);
+      setShowCircuitFeedback(true);
+    }
+    // CAS 3 : Dernier tour du dernier circuit
+    else {
+      setShowFinalFeedback(true);
+    }
+  };
+
+  const handleCircuitFeedbackSubmit = async () => {
+    try {
+      await supabase.from('exercise_feedback').insert({
+        session_id: sessionId,
+        exercise_id: null,
+        feedback_type: 'circuit',
+        circuit_number: completedCircuitNumber,
+        rpe: circuitRPE,
+        difficulte_0_10: circuitDifficulte,
+        plaisir_0_10: circuitPlaisir,
+      });
+
+      setShowCircuitFeedback(false);
+      setShowTransition(true);
+      
+      // Reset des valeurs pour le prochain circuit
+      setCircuitRPE(5);
+      setCircuitDifficulte(5);
+      setCircuitPlaisir(5);
+    } catch (error) {
+      console.error('Error saving circuit feedback:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'enregistrer le feedback",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleFinalFeedbackSubmit = async () => {
+    try {
+      await supabase.from('exercise_feedback').insert({
+        session_id: sessionId,
+        exercise_id: null,
+        feedback_type: 'session',
+        circuit_number: null,
+        rpe: sessionRPE,
+        difficulte_0_10: sessionDifficulte,
+        plaisir_0_10: sessionPlaisir,
+      });
+
+      setShowFinalFeedback(false);
+      onAllComplete();
+    } catch (error) {
+      console.error('Error saving final feedback:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'enregistrer le feedback",
+        variant: "destructive"
+      });
     }
   };
 
   const handleStartNextCircuit = () => {
     setShowTransition(false);
     setCurrentCircuitIndex(prev => prev + 1);
+    setLoggedExercises(new Set()); // Reset des exercices loggés pour le nouveau circuit
+  };
+
+  const handleExerciseLogged = (exerciseId: string, roundNumber: number) => {
+    setLoggedExercises(prev => new Set(prev).add(`${exerciseId}-${roundNumber}`));
   };
 
   // Calculer le numéro de tour global
@@ -142,6 +244,11 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
   const currentCircuitCompletedRounds = completedRoundsByCircuit[currentCircuitNumber] || 0;
   const currentRoundInCircuit = currentCircuitCompletedRounds + 1;
   const globalTourNumber = calculateGlobalTourNumber(currentCircuitIndex, currentRoundInCircuit);
+  
+  // Vérifier si tous les exercices du tour actuel sont loggés
+  const allExercisesLogged = currentCircuitExercises.every(ex => 
+    loggedExercises.has(`${ex.exercise_id}-${globalTourNumber}`)
+  );
 
   return (
     <div className="space-y-6">
@@ -230,52 +337,188 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
                 index={idx}
                 sessionId={sessionId}
                 roundNumber={globalTourNumber}
+                onExerciseLogged={handleExerciseLogged}
               />
             ))}
           </div>
 
-          {/* Round Buttons for current Circuit */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Valider les tours {nombreCircuits > 1 ? `- Circuit ${currentCircuitNumber}` : ''}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {Array.from({ length: currentCircuitConfig.rounds }).map((_, idx) => {
-                  const roundNumber = idx + 1;
-                  const isCompleted = currentCircuitCompletedRounds >= roundNumber;
-                  const isCurrent = currentCircuitCompletedRounds === roundNumber - 1;
-                  const isResting = restingCircuit === currentCircuitNumber;
-
-                  return (
-                    <Button
-                      key={roundNumber}
-                      onClick={() => handleCompleteRound(currentCircuitNumber, roundNumber)}
-                      disabled={currentCircuitCompletedRounds < roundNumber - 1 || isCompleted || isResting}
-                      variant={isCompleted ? 'default' : isCurrent ? 'outline' : 'ghost'}
-                      className="w-full h-12"
-                    >
-                      {isCompleted ? (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Tour {roundNumber} - Terminé ✓
-                        </>
-                      ) : (
-                        <>
-                          Tour {roundNumber} / {currentCircuitConfig.rounds}
-                          {isCurrent && ' - En cours'}
-                        </>
-                      )}
-                    </Button>
-                  );
-                })}
-              </div>
+          {/* Bouton de validation global */}
+          <Card className="sticky bottom-4 mt-6 bg-gradient-to-r from-primary/10 to-primary/5">
+            <CardContent className="pt-6">
+              <Button 
+                onClick={handleValidateTour}
+                disabled={!allExercisesLogged || restingCircuit !== null}
+                size="lg"
+                className="w-full"
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-lg font-semibold">
+                    Tour {currentRoundInCircuit}/{currentCircuitConfig.rounds}
+                    {currentRoundInCircuit <= currentCircuitConfig.rounds && " - En cours"}
+                  </span>
+                  
+                  {allExercisesLogged ? (
+                    <span className="text-sm opacity-90">
+                      Appuyer pour finir le tour
+                    </span>
+                  ) : (
+                    <span className="text-sm opacity-75">
+                      Complétez tous les exercices pour continuer
+                    </span>
+                  )}
+                </div>
+              </Button>
             </CardContent>
           </Card>
         </div>
       )}
+
+      {/* Modal de feedback entre circuits */}
+      <Dialog open={showCircuitFeedback} onOpenChange={setShowCircuitFeedback}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              ✅ Circuit {completedCircuitNumber} terminé !
+            </DialogTitle>
+            <DialogDescription>
+              Comment avez-vous trouvé ce circuit ?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* RPE - Effort perçu */}
+            <div>
+              <Label>RPE - Effort perçu (1-10)</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                1 = Très facile | 5 = Modéré | 10 = Effort maximal
+              </p>
+              <Slider
+                min={1}
+                max={10}
+                step={1}
+                value={[circuitRPE]}
+                onValueChange={(value) => setCircuitRPE(value[0])}
+              />
+              <p className="text-center text-2xl font-bold mt-2">{circuitRPE}/10</p>
+            </div>
+            
+            {/* Difficulté technique */}
+            <div>
+              <Label>Difficulté technique (0-10)</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                0 = Très facile | 5 = Modéré | 10 = Très difficile
+              </p>
+              <Slider
+                min={0}
+                max={10}
+                step={1}
+                value={[circuitDifficulte]}
+                onValueChange={(value) => setCircuitDifficulte(value[0])}
+              />
+              <p className="text-center text-2xl font-bold mt-2">{circuitDifficulte}/10</p>
+            </div>
+            
+            {/* Plaisir */}
+            <div>
+              <Label>Plaisir ressenti (0-10)</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                0 = Aucun plaisir | 5 = Neutre | 10 = Très plaisant
+              </p>
+              <Slider
+                min={0}
+                max={10}
+                step={1}
+                value={[circuitPlaisir]}
+                onValueChange={(value) => setCircuitPlaisir(value[0])}
+              />
+              <p className="text-center text-2xl font-bold mt-2">{circuitPlaisir}/10</p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={handleCircuitFeedbackSubmit} size="lg" className="w-full">
+              Continuer
+              {currentCircuitIndex < nombreCircuits - 1 && 
+                ` → Circuit ${currentCircuitIndex + 2}`
+              }
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de feedback final */}
+      <Dialog open={showFinalFeedback} onOpenChange={setShowFinalFeedback}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              🎉 Séance terminée !
+            </DialogTitle>
+            <DialogDescription>
+              Comment s'est passée la séance globale ?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* RPE global */}
+            <div>
+              <Label>RPE moyen de la séance (1-10)</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Évaluez l'effort global de toute la séance
+              </p>
+              <Slider
+                min={1}
+                max={10}
+                step={1}
+                value={[sessionRPE]}
+                onValueChange={(value) => setSessionRPE(value[0])}
+              />
+              <p className="text-center text-2xl font-bold mt-2">{sessionRPE}/10</p>
+            </div>
+            
+            {/* Difficulté globale */}
+            <div>
+              <Label>Difficulté technique globale (0-10)</Label>
+              <Slider
+                min={0}
+                max={10}
+                step={1}
+                value={[sessionDifficulte]}
+                onValueChange={(value) => setSessionDifficulte(value[0])}
+              />
+              <p className="text-center text-2xl font-bold mt-2">{sessionDifficulte}/10</p>
+            </div>
+            
+            {/* Plaisir global */}
+            <div>
+              <Label>Plaisir global (0-10)</Label>
+              <Slider
+                min={0}
+                max={10}
+                step={1}
+                value={[sessionPlaisir]}
+                onValueChange={(value) => setSessionPlaisir(value[0])}
+              />
+              <p className="text-center text-2xl font-bold mt-2">{sessionPlaisir}/10</p>
+            </div>
+            
+            {/* Commentaire optionnel */}
+            <div>
+              <Label>Commentaire (optionnel)</Label>
+              <Textarea
+                placeholder="Comment vous êtes-vous senti pendant cette séance ?"
+                value={sessionComment}
+                onChange={(e) => setSessionComment(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={handleFinalFeedbackSubmit} size="lg" className="w-full">
+              Terminer la séance
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
