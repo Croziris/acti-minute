@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Play, Plus, Minus } from 'lucide-react';
 import { getYouTubeEmbedUrl, isYouTubeShort } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface Exercise {
   exercise_id: string;
@@ -28,11 +31,45 @@ interface Exercise {
 interface CircuitExerciseCardProps {
   exercise: Exercise;
   index: number;
+  sessionId: string;
+  roundNumber: number;
 }
 
-export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({ exercise: we, index }) => {
+export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({ exercise: we, index, sessionId, roundNumber }) => {
   const [showVideo, setShowVideo] = useState(false);
+  const [repsCompleted, setRepsCompleted] = useState<number>(we.reps || 0);
+  const [charge, setCharge] = useState<number>(we.charge_cible || 0);
+  const [isLogging, setIsLogging] = useState(false);
   const isShort = we.exercise?.youtube_url ? isYouTubeShort(we.exercise.youtube_url) : false;
+
+  const handleLogSet = async () => {
+    setIsLogging(true);
+    try {
+      const { error } = await supabase.from('set_log').insert({
+        session_id: sessionId,
+        exercise_id: we.exercise_id,
+        index_serie: roundNumber,
+        reps: repsCompleted,
+        charge: charge || null,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Tour enregistré",
+        description: `${repsCompleted} reps enregistrées`,
+      });
+    } catch (error) {
+      console.error('Error logging set:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'enregistrer le tour",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLogging(false);
+    }
+  };
 
   return (
     <Card className="w-full">
@@ -93,21 +130,78 @@ export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({ exerci
         )}
 
         {/* Exercise Prescription */}
-        <div className="grid grid-cols-2 gap-4 p-3 bg-muted/30 rounded-lg">
-          <div className="text-center">
-            <div className="font-semibold text-lg">
-              {we.reps || we.temps_seconds}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {we.reps ? 'Répétitions' : 'Secondes'}
-            </div>
-          </div>
-          {we.charge_cible && (
+        <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+          <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
-              <div className="font-semibold text-lg">{we.charge_cible}kg</div>
-              <div className="text-xs text-muted-foreground">Charge cible</div>
+              <div className="font-semibold text-lg">
+                {we.reps || we.temps_seconds}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {we.reps ? 'Répétitions cibles' : 'Secondes'}
+              </div>
             </div>
-          )}
+            {we.charge_cible && (
+              <div className="text-center">
+                <div className="font-semibold text-lg">{we.charge_cible}kg</div>
+                <div className="text-xs text-muted-foreground">Charge cible</div>
+              </div>
+            )}
+          </div>
+
+          {/* Logging Controls */}
+          <div className="pt-3 border-t border-border space-y-3">
+            <div className="text-sm font-medium text-center">Tour {roundNumber}</div>
+            
+            {we.reps && (
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground">Répétitions réalisées</label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRepsCompleted(Math.max(0, repsCompleted - 1))}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    type="number"
+                    value={repsCompleted}
+                    onChange={(e) => setRepsCompleted(parseInt(e.target.value) || 0)}
+                    className="text-center"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRepsCompleted(repsCompleted + 1)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {we.charge_cible && (
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground">Charge utilisée (kg)</label>
+                <Input
+                  type="number"
+                  value={charge}
+                  onChange={(e) => setCharge(parseFloat(e.target.value) || 0)}
+                  className="text-center"
+                  step="0.5"
+                />
+              </div>
+            )}
+
+            <Button
+              onClick={handleLogSet}
+              disabled={isLogging}
+              className="w-full"
+              size="sm"
+            >
+              Valider ce tour
+            </Button>
+          </div>
         </div>
 
         {/* Couleur élastique */}

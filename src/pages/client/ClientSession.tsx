@@ -4,7 +4,6 @@ import { ClientLayout } from "@/components/layout/ClientLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { SessionTimer } from "@/components/session/SessionTimer";
 import { ExerciseCard } from "@/components/session/ExerciseCard";
 import { CircuitTrainingView } from "@/components/client/CircuitTrainingView";
 import { useSessionData } from "@/hooks/useSessionData";
@@ -196,9 +195,6 @@ const ClientSession = () => {
             )}
           </div>
         </div>
-
-        {/* Session Timer */}
-        {sessionStarted && !sessionCompleted && <SessionTimer autoStart />}
 
         {/* Progress */}
         {exercises.length > 0 && (

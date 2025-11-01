@@ -185,6 +185,8 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
                   key={we.exercise_id} 
                   exercise={we} 
                   index={idx}
+                  sessionId={sessionId}
+                  roundNumber={completedRounds + 1}
                 />
               ))}
             </div>
