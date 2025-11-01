@@ -169,8 +169,23 @@ const ClientSession = () => {
 
   const exercises = session.workout?.workout_exercise || [];
   const isCircuitWorkout = session.workout?.workout_type === "circuit";
-  const completionRate = exercises.length > 0 ? (completedExercises.size / exercises.length) * 100 : 0;
-  const canComplete = completionRate >= 100 || completedExercises.size === exercises.length;
+  
+  // Pour les circuits, on compte les tours, pas les exercices
+  const circuitConfigs = session.workout?.circuit_configs as Array<{rounds: number, rest: number}> | undefined;
+  const totalRounds = isCircuitWorkout 
+    ? (circuitConfigs || [{ rounds: session.workout.circuit_rounds || 3, rest: 60 }])
+        .reduce((sum, config) => sum + config.rounds, 0)
+    : 0;
+  
+  const completionRate = isCircuitWorkout 
+    ? 0 // La progression est gérée dans CircuitTrainingView
+    : exercises.length > 0 
+      ? (completedExercises.size / exercises.length) * 100 
+      : 0;
+  
+  const canComplete = isCircuitWorkout 
+    ? completedExercises.size === exercises.length // Tous les exercices marqués comme complétés par le circuit
+    : completionRate >= 100 || completedExercises.size === exercises.length;
 
   return (
     <ClientLayout>
@@ -196,8 +211,8 @@ const ClientSession = () => {
           </div>
         </div>
 
-        {/* Progress */}
-        {exercises.length > 0 && (
+        {/* Progress - Affichage différent pour circuits */}
+        {exercises.length > 0 && !isCircuitWorkout && (
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">

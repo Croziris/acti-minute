@@ -52,10 +52,12 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
   onRoundComplete,
   onAllComplete
 }) => {
-  // États pour gérer les tours complétés de chaque circuit
+  // États pour gérer les tours et le circuit actif
   const [completedRoundsByCircuit, setCompletedRoundsByCircuit] = useState<Record<number, number>>({});
+  const [currentCircuitIndex, setCurrentCircuitIndex] = useState(0);
   const [restingCircuit, setRestingCircuit] = useState<number | null>(null);
   const [restRemaining, setRestRemaining] = useState(0);
+  const [showTransition, setShowTransition] = useState(false);
 
   // Grouper les exercices par circuit
   const exercisesByCircuit = exercises.reduce((acc, exercise) => {
@@ -98,26 +100,48 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
         });
       }, 1000);
     } else {
-      // Vérifier si tous les circuits sont terminés
-      const allCompleted = Array.from({ length: nombreCircuits }, (_, i) => i + 1)
-        .every(num => {
-          const config = getCircuitConfig(num);
-          const completed = num === circuitNumber ? roundNumber : (completedRoundsByCircuit[num] || 0);
-          return completed >= config.rounds;
-        });
-      
-      if (allCompleted) {
+      // Circuit terminé - vérifier s'il reste des circuits
+      if (currentCircuitIndex < nombreCircuits - 1) {
+        // Afficher la transition vers le prochain circuit
+        setShowTransition(true);
+      } else {
+        // Tous les circuits sont terminés
         onAllComplete();
       }
     }
   };
 
-  // Calculer la progression totale
+  const handleStartNextCircuit = () => {
+    setShowTransition(false);
+    setCurrentCircuitIndex(prev => prev + 1);
+  };
+
+  // Calculer le numéro de tour global
+  const calculateGlobalTourNumber = (circuitIndex: number, roundInCircuit: number): number => {
+    let globalTour = 0;
+    for (let i = 0; i < circuitIndex; i++) {
+      const config = getCircuitConfig(i + 1);
+      globalTour += config.rounds;
+    }
+    globalTour += roundInCircuit;
+    return globalTour;
+  };
+
+  // Calculer la progression totale en tours
   const totalRoundsNeeded = Array.from({ length: nombreCircuits }, (_, i) => i + 1)
     .reduce((sum, num) => sum + getCircuitConfig(num).rounds, 0);
   const totalRoundsCompleted = Object.entries(completedRoundsByCircuit)
     .reduce((sum, [_, rounds]) => sum + rounds, 0);
   const progressPercentage = (totalRoundsCompleted / totalRoundsNeeded) * 100;
+
+  // Circuit actuel (1-indexed)
+  const currentCircuitNumber = currentCircuitIndex + 1;
+  const currentCircuitExercises = (exercisesByCircuit[currentCircuitNumber] || [])
+    .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+  const currentCircuitConfig = getCircuitConfig(currentCircuitNumber);
+  const currentCircuitCompletedRounds = completedRoundsByCircuit[currentCircuitNumber] || 0;
+  const currentRoundInCircuit = currentCircuitCompletedRounds + 1;
+  const globalTourNumber = calculateGlobalTourNumber(currentCircuitIndex, currentRoundInCircuit);
 
   return (
     <div className="space-y-6">
@@ -126,15 +150,19 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Dumbbell className="h-5 w-5" />
-            Circuit Training {nombreCircuits > 1 ? `- ${nombreCircuits} circuits` : ''}
+            Circuit Training
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Progression globale</span>
-            <span className="font-semibold">
-              {totalRoundsCompleted} / {totalRoundsNeeded} tours
-            </span>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            {nombreCircuits > 1 && (
+              <Badge variant="outline" className="text-base">
+                Circuit {currentCircuitNumber}/{nombreCircuits}
+              </Badge>
+            )}
+            <Badge variant="default" className="text-base">
+              Tour {globalTourNumber}/{totalRoundsNeeded}
+            </Badge>
           </div>
           <Progress value={progressPercentage} className="h-2" />
         </CardContent>
@@ -154,86 +182,100 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
         </Card>
       )}
 
-      {/* Circuits */}
-      {Array.from({ length: nombreCircuits }, (_, i) => i + 1).map(circuitNumber => {
-        const circuitExercises = (exercisesByCircuit[circuitNumber] || [])
-          .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
-        const config = getCircuitConfig(circuitNumber);
-        const completedRounds = completedRoundsByCircuit[circuitNumber] || 0;
-        const circuitProgress = (completedRounds / config.rounds) * 100;
+      {/* Transition entre circuits */}
+      {showTransition && (
+        <Card className="bg-green-500/10 border-green-500/20">
+          <CardContent className="p-8 text-center">
+            <CheckCircle className="h-16 w-16 mx-auto mb-4 text-green-600" />
+            <h3 className="text-2xl font-bold mb-2">
+              ✅ Circuit {currentCircuitNumber} terminé !
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              Excellent travail ! 💪 Préparez-vous pour le prochain circuit.
+            </p>
+            <Button 
+              onClick={handleStartNextCircuit} 
+              size="lg" 
+              className="bg-gradient-primary"
+            >
+              Démarrer Circuit {currentCircuitNumber + 1}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
-        return (
-          <div key={circuitNumber} className="space-y-4">
-            {nombreCircuits > 1 && (
-              <div className="flex items-center gap-3">
-                <Badge variant="outline" className="text-lg px-4 py-1.5">
-                  Circuit {circuitNumber}
-                </Badge>
-                <span className="text-sm text-muted-foreground">
-                  {completedRounds} / {config.rounds} tours · {config.rest}s repos
-                </span>
-              </div>
-            )}
-
-            {/* Circuit Exercises */}
-            <div className="space-y-3">
-              <h3 className="text-base font-semibold">
-                {nombreCircuits > 1 ? `Exercices du circuit ${circuitNumber}` : 'Exercices du circuit'}
-              </h3>
-              {circuitExercises.map((we, idx) => (
-                <CircuitExerciseCard 
-                  key={we.exercise_id} 
-                  exercise={we} 
-                  index={idx}
-                  sessionId={sessionId}
-                  roundNumber={completedRounds + 1}
-                />
-              ))}
+      {/* Circuit actuel uniquement */}
+      {!showTransition && (
+        <div className="space-y-4">
+          {nombreCircuits > 1 && (
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="text-lg px-4 py-1.5">
+                Circuit {currentCircuitNumber}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                Tour {currentRoundInCircuit} / {currentCircuitConfig.rounds} · {currentCircuitConfig.rest}s repos
+              </span>
             </div>
+          )}
 
-            {/* Round Buttons for this Circuit */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  Valider les tours {nombreCircuits > 1 ? `- Circuit ${circuitNumber}` : ''}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {Array.from({ length: config.rounds }).map((_, idx) => {
-                    const roundNumber = idx + 1;
-                    const isCompleted = completedRounds >= roundNumber;
-                    const isCurrent = completedRounds === roundNumber - 1;
-                    const isResting = restingCircuit === circuitNumber;
-
-                    return (
-                      <Button
-                        key={roundNumber}
-                        onClick={() => handleCompleteRound(circuitNumber, roundNumber)}
-                        disabled={completedRounds < roundNumber - 1 || isCompleted || isResting}
-                        variant={isCompleted ? 'default' : isCurrent ? 'outline' : 'ghost'}
-                        className="w-full h-12"
-                      >
-                        {isCompleted ? (
-                          <>
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Tour {roundNumber} - Terminé ✓
-                          </>
-                        ) : (
-                          <>
-                            Tour {roundNumber} / {config.rounds}
-                            {isCurrent && ' - En cours'}
-                          </>
-                        )}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+          {/* Circuit Exercises */}
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold">
+              {nombreCircuits > 1 ? `Exercices du circuit ${currentCircuitNumber}` : 'Exercices du circuit'}
+            </h3>
+            {currentCircuitExercises.map((we, idx) => (
+              <CircuitExerciseCard 
+                key={we.exercise_id} 
+                exercise={we} 
+                index={idx}
+                sessionId={sessionId}
+                roundNumber={globalTourNumber}
+              />
+            ))}
           </div>
-        );
-      })}
+
+          {/* Round Buttons for current Circuit */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Valider les tours {nombreCircuits > 1 ? `- Circuit ${currentCircuitNumber}` : ''}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {Array.from({ length: currentCircuitConfig.rounds }).map((_, idx) => {
+                  const roundNumber = idx + 1;
+                  const isCompleted = currentCircuitCompletedRounds >= roundNumber;
+                  const isCurrent = currentCircuitCompletedRounds === roundNumber - 1;
+                  const isResting = restingCircuit === currentCircuitNumber;
+
+                  return (
+                    <Button
+                      key={roundNumber}
+                      onClick={() => handleCompleteRound(currentCircuitNumber, roundNumber)}
+                      disabled={currentCircuitCompletedRounds < roundNumber - 1 || isCompleted || isResting}
+                      variant={isCompleted ? 'default' : isCurrent ? 'outline' : 'ghost'}
+                      className="w-full h-12"
+                    >
+                      {isCompleted ? (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Tour {roundNumber} - Terminé ✓
+                        </>
+                      ) : (
+                        <>
+                          Tour {roundNumber} / {currentCircuitConfig.rounds}
+                          {isCurrent && ' - En cours'}
+                        </>
+                      )}
+                    </Button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
