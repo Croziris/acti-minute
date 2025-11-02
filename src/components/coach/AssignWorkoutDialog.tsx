@@ -390,7 +390,7 @@ export const AssignWorkoutDialog: React.FC<Props> = ({
               
               <div>
                 <Label>Sélectionner une séance</Label>
-                <ScrollArea className="h-[400px] mt-2 pr-4">
+                <ScrollArea className="h-[500px] mt-2 pr-4">
                   {templates.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <p>Aucune séance disponible</p>
