@@ -32,6 +32,7 @@ interface WorkoutExercise {
   couleur_elastique: string | null;
   circuit_number: number;
   tips: string | null;
+  section: 'warmup' | 'main' | 'cooldown';
   exercise: {
     libelle: string;
     description: string | null;
@@ -57,9 +58,18 @@ export const WorkoutEditor: React.FC<Props> = ({
   const [loading, setLoading] = useState(true);
   const [selectExerciseOpen, setSelectExerciseOpen] = useState(false);
   const [selectedCircuitForAdd, setSelectedCircuitForAdd] = useState<number>(1);
+  const [selectedSection, setSelectedSection] = useState<'warmup' | 'main' | 'cooldown'>('main');
   const { toast } = useToast();
 
-  // Grouper les exercices par circuit
+  // Grouper les exercices par section et par circuit
+  const exercisesBySection = React.useMemo(() => {
+    return {
+      warmup: exercises.filter(e => e.section === 'warmup').sort((a, b) => a.order_index - b.order_index),
+      main: exercises.filter(e => e.section === 'main').sort((a, b) => a.order_index - b.order_index),
+      cooldown: exercises.filter(e => e.section === 'cooldown').sort((a, b) => a.order_index - b.order_index),
+    };
+  }, [exercises]);
+
   const exercisesByCircuit = exercises.reduce((acc, exercise) => {
     const circuitNum = exercise.circuit_number || 1;
     if (!acc[circuitNum]) acc[circuitNum] = [];
@@ -83,7 +93,7 @@ export const WorkoutEditor: React.FC<Props> = ({
         .order('order_index', { ascending: true });
 
       if (error) throw error;
-      setExercises(data || []);
+      setExercises((data || []) as WorkoutExercise[]);
     } catch (error: any) {
       console.error('Error fetching exercises:', error);
       toast({
@@ -102,8 +112,10 @@ export const WorkoutEditor: React.FC<Props> = ({
 
   const handleAddExercise = async (exercise: any) => {
     try {
-      const maxOrderIndex = exercises.length > 0 
-        ? Math.max(...exercises.map(e => e.order_index))
+      // Calculer le prochain order_index pour cette section
+      const exercisesInSection = exercises.filter(e => e.section === selectedSection);
+      const maxOrderIndex = exercisesInSection.length > 0 
+        ? Math.max(...exercisesInSection.map(e => e.order_index))
         : -1;
 
       const { error } = await supabase
@@ -114,14 +126,21 @@ export const WorkoutEditor: React.FC<Props> = ({
           order_index: maxOrderIndex + 1,
           series: workoutType === 'classic' ? 3 : null,
           reps: 10,
-          circuit_number: selectedCircuitForAdd
+          circuit_number: selectedCircuitForAdd,
+          section: selectedSection
         });
 
       if (error) throw error;
 
+      const sectionLabels = {
+        warmup: 'Échauffement',
+        main: 'Corps de séance',
+        cooldown: 'Retour au calme'
+      };
+
       toast({
         title: "Exercice ajouté",
-        description: `${exercise.libelle} a été ajouté au circuit ${selectedCircuitForAdd}`
+        description: `${exercise.libelle} a été ajouté à ${sectionLabels[selectedSection]}`
       });
 
       setSelectExerciseOpen(false);
@@ -136,8 +155,9 @@ export const WorkoutEditor: React.FC<Props> = ({
     }
   };
 
-  const openAddExerciseDialog = (circuitNumber: number = 1) => {
+  const openAddExerciseDialog = (circuitNumber: number = 1, section: 'warmup' | 'main' | 'cooldown' = 'main') => {
     setSelectedCircuitForAdd(circuitNumber);
+    setSelectedSection(section);
     setSelectExerciseOpen(true);
   };
 
@@ -290,44 +310,139 @@ export const WorkoutEditor: React.FC<Props> = ({
           })}
         </div>
       ) : (
-        // Affichage normal pour les séances classiques ou single circuit
-        <>
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Exercices de la séance</h3>
-            <Button onClick={() => openAddExerciseDialog(1)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter un exercice
-            </Button>
-          </div>
-
-          {exercises.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <p className="text-muted-foreground mb-4">Aucun exercice dans cette séance</p>
-                <Button onClick={() => openAddExerciseDialog(1)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Ajouter un exercice
-                </Button>
-              </CardContent>
+        // Affichage par section pour les séances classiques ou single circuit
+        <div className="space-y-6">
+          {/* Section Échauffement */}
+          {(exercisesBySection.warmup.length > 0 || true) && (
+            <Card className="border-2 border-orange-500/30">
+              <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🔥</span>
+                    <div>
+                      <CardTitle className="text-lg">Échauffement</CardTitle>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Préparation (sans feedback)
+                      </p>
+                    </div>
+                    <Badge variant="outline">{exercisesBySection.warmup.length}</Badge>
+                  </div>
+                  <Button size="sm" onClick={() => openAddExerciseDialog(1, 'warmup')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Ajouter
+                  </Button>
+                </div>
+              </CardHeader>
+              {exercisesBySection.warmup.length > 0 && (
+                <CardContent className="space-y-3 pt-6">
+                  {exercisesBySection.warmup.map((exercise, index) => (
+                    <ExerciseEditorCard
+                      key={exercise.id}
+                      exercise={exercise}
+                      index={index}
+                      totalExercises={exercisesBySection.warmup.length}
+                      workoutType={workoutType}
+                      nombreCircuits={nombreCircuits}
+                      onUpdate={handleUpdateExercise}
+                      onDelete={handleDeleteExercise}
+                      onMove={handleMoveExercise}
+                    />
+                  ))}
+                </CardContent>
+              )}
             </Card>
-          ) : (
-            <div className="space-y-3">
-              {exercises.map((exercise, index) => (
-                <ExerciseEditorCard
-                  key={exercise.id}
-                  exercise={exercise}
-                  index={index}
-                  totalExercises={exercises.length}
-                  workoutType={workoutType}
-                  nombreCircuits={nombreCircuits}
-                  onUpdate={handleUpdateExercise}
-                  onDelete={handleDeleteExercise}
-                  onMove={handleMoveExercise}
-                />
-              ))}
-            </div>
           )}
-        </>
+
+          {/* Section Corps de séance */}
+          <Card className="border-2 border-blue-500/30">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">💪</span>
+                  <div>
+                    <CardTitle className="text-lg">Corps de séance</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Exercices principaux (avec feedback)
+                    </p>
+                  </div>
+                  <Badge variant="outline">{exercisesBySection.main.length}</Badge>
+                </div>
+                <Button size="sm" onClick={() => openAddExerciseDialog(1, 'main')}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-6">
+              {exercisesBySection.main.length === 0 ? (
+                <div className="py-8 text-center">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Aucun exercice dans le corps de séance
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => openAddExerciseDialog(1, 'main')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Ajouter un exercice
+                  </Button>
+                </div>
+              ) : (
+                exercisesBySection.main.map((exercise, index) => (
+                  <ExerciseEditorCard
+                    key={exercise.id}
+                    exercise={exercise}
+                    index={index}
+                    totalExercises={exercisesBySection.main.length}
+                    workoutType={workoutType}
+                    nombreCircuits={nombreCircuits}
+                    onUpdate={handleUpdateExercise}
+                    onDelete={handleDeleteExercise}
+                    onMove={handleMoveExercise}
+                  />
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Section Retour au calme */}
+          {(exercisesBySection.cooldown.length > 0 || true) && (
+            <Card className="border-2 border-green-500/30">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🧘</span>
+                    <div>
+                      <CardTitle className="text-lg">Retour au calme</CardTitle>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Récupération (optionnel, sans feedback)
+                      </p>
+                    </div>
+                    <Badge variant="outline">{exercisesBySection.cooldown.length}</Badge>
+                  </div>
+                  <Button size="sm" onClick={() => openAddExerciseDialog(1, 'cooldown')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Ajouter
+                  </Button>
+                </div>
+              </CardHeader>
+              {exercisesBySection.cooldown.length > 0 && (
+                <CardContent className="space-y-3 pt-6">
+                  {exercisesBySection.cooldown.map((exercise, index) => (
+                    <ExerciseEditorCard
+                      key={exercise.id}
+                      exercise={exercise}
+                      index={index}
+                      totalExercises={exercisesBySection.cooldown.length}
+                      workoutType={workoutType}
+                      nombreCircuits={nombreCircuits}
+                      onUpdate={handleUpdateExercise}
+                      onDelete={handleDeleteExercise}
+                      onMove={handleMoveExercise}
+                    />
+                  ))}
+                </CardContent>
+              )}
+            </Card>
+          )}
+        </div>
       )}
 
       <Dialog open={selectExerciseOpen} onOpenChange={setSelectExerciseOpen}>
@@ -335,9 +450,38 @@ export const WorkoutEditor: React.FC<Props> = ({
           <DialogHeader>
             <DialogTitle>Sélectionner un exercice</DialogTitle>
             <DialogDescription>
-              Choisissez un exercice à ajouter à cette séance
+              {selectedSection === 'warmup' && '🔥 Échauffement - Exercices de préparation (sans feedback)'}
+              {selectedSection === 'main' && '💪 Corps de séance - Exercices principaux (avec feedback)'}
+              {selectedSection === 'cooldown' && '🧘 Retour au calme - Récupération (optionnel, sans feedback)'}
             </DialogDescription>
           </DialogHeader>
+          <div className="mb-4">
+            <Select value={selectedSection} onValueChange={(value: 'warmup' | 'main' | 'cooldown') => setSelectedSection(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="warmup">
+                  <div className="flex items-center gap-2">
+                    <span>🔥</span>
+                    <span>Échauffement</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="main">
+                  <div className="flex items-center gap-2">
+                    <span>💪</span>
+                    <span>Corps de séance</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="cooldown">
+                  <div className="flex items-center gap-2">
+                    <span>🧘</span>
+                    <span>Retour au calme</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <ExerciseLibrary
             selectionMode
             onSelectExercise={handleAddExercise}

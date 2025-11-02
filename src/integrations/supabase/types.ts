@@ -842,6 +842,7 @@ export type Database = {
           order_index: number | null
           reps: number | null
           rpe_cible: number | null
+          section: string | null
           series: number | null
           tempo: string | null
           temps_repos_seconds: number | null
@@ -860,6 +861,7 @@ export type Database = {
           order_index?: number | null
           reps?: number | null
           rpe_cible?: number | null
+          section?: string | null
           series?: number | null
           tempo?: string | null
           temps_repos_seconds?: number | null
@@ -878,6 +880,7 @@ export type Database = {
           order_index?: number | null
           reps?: number | null
           rpe_cible?: number | null
+          section?: string | null
           series?: number | null
           tempo?: string | null
           temps_repos_seconds?: number | null

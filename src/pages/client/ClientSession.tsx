@@ -30,6 +30,9 @@ const ClientSession = () => {
   const [showValidationScreen, setShowValidationScreen] = useState(false);
   const [showContactScreen, setShowContactScreen] = useState(false);
   const [showFinalFeedback, setShowFinalFeedback] = useState(false);
+  const [currentSection, setCurrentSection] = useState<'warmup' | 'main' | 'cooldown' | 'completed'>('warmup');
+  const [warmupCompleted, setWarmupCompleted] = useState(false);
+  const [mainCompleted, setMainCompleted] = useState(false);
 
   useEffect(() => {
     if (session?.statut === "ongoing") {
@@ -304,6 +307,8 @@ const ClientSession = () => {
         exercise_id: null, // null = feedback global de séance
         difficulte_0_10: feedback.difficulte,
         plaisir_0_10: feedback.plaisir,
+        feedback_type: 'session',
+        rpe: feedback.rpe,
         created_at: new Date().toISOString(),
       });
 
@@ -328,6 +333,81 @@ const ClientSession = () => {
       });
     }
   };
+
+  const completeWarmup = () => {
+    console.log("✅ Échauffement terminé");
+    setWarmupCompleted(true);
+    setCurrentSection('main');
+    
+    toast({
+      title: "Échauffement terminé !",
+      description: "Passons au corps de séance 💪",
+    });
+  };
+
+  const completeMain = () => {
+    console.log("✅ Corps de séance terminé");
+    setMainCompleted(true);
+    
+    // Si cooldown existe, proposer, sinon terminer
+    if (exercisesBySection.cooldown.length > 0) {
+      setCurrentSection('cooldown');
+      toast({
+        title: "Corps de séance terminé !",
+        description: "Veux-tu faire le retour au calme ? 🧘",
+      });
+    } else {
+      // Pas de cooldown → Feedback final
+      if (isCircuitWorkout) {
+        handleCircuitComplete();
+      } else {
+        setShowFinalFeedback(true);
+      }
+    }
+  };
+
+  const skipCooldown = () => {
+    console.log("⏭️ Retour au calme ignoré");
+    setCurrentSection('completed');
+    
+    // Déclencher la fin de séance
+    if (isCircuitWorkout) {
+      handleCircuitComplete();
+    } else {
+      setShowFinalFeedback(true);
+    }
+  };
+
+  const completeCooldown = () => {
+    console.log("✅ Retour au calme terminé");
+    setCurrentSection('completed');
+    
+    toast({
+      title: "Séance complète !",
+      description: "Bravo, tu as tout fait ! 🎉",
+    });
+    
+    // Déclencher la fin de séance
+    if (isCircuitWorkout) {
+      handleCircuitComplete();
+    } else {
+      setShowFinalFeedback(true);
+    }
+  };
+
+  // Déterminer la section de départ
+  useEffect(() => {
+    if (sessionStarted && exercises.length > 0 && currentSection === 'warmup') {
+      // Déterminer par quelle section commencer
+      if (exercisesBySection.warmup.length > 0) {
+        setCurrentSection('warmup');
+      } else if (exercisesBySection.main.length > 0) {
+        setCurrentSection('main');
+      } else if (exercisesBySection.cooldown.length > 0) {
+        setCurrentSection('cooldown');
+      }
+    }
+  }, [sessionStarted, exercises.length, exercisesBySection, currentSection]);
 
   if (loading) {
     return (
@@ -362,9 +442,6 @@ const ClientSession = () => {
     );
   }
 
-  const exercises = session.workout?.workout_exercise || [];
-  const isCircuitWorkout = session.workout?.workout_type === "circuit";
-  
   // Pour les circuits, on compte les tours, pas les exercices
   const circuitConfigs = session.workout?.circuit_configs as Array<{rounds: number, rest: number}> | undefined;
   const totalRounds = isCircuitWorkout 
@@ -598,36 +675,179 @@ const ClientSession = () => {
               </Card>
             )}
 
-            {/* Exercises - Mode Circuit ou Classique */}
-            {sessionStarted &&
-              exercises.length > 0 &&
-              (isCircuitWorkout ? (
-                <CircuitTrainingView
-                  exercises={exercises}
-                  circuitRounds={session.workout.circuit_rounds || 3}
-                  restTime={session.workout.temps_repos_tours_seconds || 60}
-                  sessionId={session.id}
-                  nombreCircuits={session.workout.nombre_circuits || 1}
-                  circuitConfigs={session.workout.circuit_configs || undefined}
-                  onRoundComplete={handleRoundComplete}
-                  onAllComplete={handleCircuitComplete}
-                />
-              ) : (
-                <div className="space-y-6">
-                  {exercises.map((workoutExercise, index) => (
-                    <ExerciseCard
-                      key={workoutExercise.id}
-                      exercise={workoutExercise.exercise}
-                      workoutExercise={workoutExercise}
-                      sessionId={session.id}
-                      onSetComplete={() => {}}
-                      onFeedback={(feedback) => {
-                        handleExerciseComplete(workoutExercise.exercise.id);
-                      }}
-                    />
-                  ))}
-                </div>
-              ))}
+            {/* Exercises - Par section (warmup/main/cooldown) */}
+            {sessionStarted && exercises.length > 0 && (
+              <div className="space-y-6">
+                {/* ══════════════════════════════════════════
+                    SECTION 1 : ÉCHAUFFEMENT
+                    ══════════════════════════════════════════ */}
+                {currentSection === 'warmup' && exercisesBySection.warmup.length > 0 && (
+                  <div className="space-y-4">
+                    {/* Header échauffement */}
+                    <Card className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 border-2 border-orange-500">
+                      <CardContent className="p-6 text-center">
+                        <div className="text-4xl mb-2">🔥</div>
+                        <h2 className="text-2xl font-bold mb-2">Échauffement</h2>
+                        <p className="text-muted-foreground">
+                          Prépare ton corps avant l'effort principal
+                        </p>
+                        <Badge variant="outline" className="mt-3">
+                          {exercisesBySection.warmup.length} exercice{exercisesBySection.warmup.length > 1 ? 's' : ''}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+
+                    {/* Exercices d'échauffement */}
+                    {exercisesBySection.warmup.map((workoutExercise) => (
+                      <ExerciseCard
+                        key={workoutExercise.id}
+                        exercise={workoutExercise.exercise}
+                        workoutExercise={workoutExercise}
+                        sessionId={session.id}
+                        onSetComplete={() => {}}
+                        onFeedback={null}
+                        showFeedback={false}
+                      />
+                    ))}
+
+                    {/* Bouton pour passer au corps de séance */}
+                    <Card className="sticky bottom-4 bg-gradient-to-r from-primary/10 to-primary/5">
+                      <CardContent className="p-6">
+                        <Button 
+                          onClick={completeWarmup} 
+                          size="lg" 
+                          className="w-full h-14 text-lg"
+                        >
+                          <CheckCircle className="h-5 w-5 mr-2" />
+                          Terminer l'échauffement et commencer la séance
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* ══════════════════════════════════════════
+                    SECTION 2 : CORPS DE SÉANCE
+                    ══════════════════════════════════════════ */}
+                {currentSection === 'main' && exercisesBySection.main.length > 0 && (
+                  <div className="space-y-4">
+                    {/* Header corps de séance */}
+                    <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-2 border-blue-500">
+                      <CardContent className="p-6 text-center">
+                        <div className="text-4xl mb-2">💪</div>
+                        <h2 className="text-2xl font-bold mb-2">Corps de séance</h2>
+                        <p className="text-muted-foreground">
+                          Effort principal - Donne tout ! 🔥
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    {/* Affichage selon le type (circuit ou classique) */}
+                    {isCircuitWorkout ? (
+                      <CircuitTrainingView
+                        exercises={exercisesBySection.main}
+                        circuitRounds={session.workout.circuit_rounds || 3}
+                        restTime={session.workout.temps_repos_tours_seconds || 60}
+                        sessionId={session.id}
+                        nombreCircuits={session.workout.nombre_circuits || 1}
+                        circuitConfigs={session.workout.circuit_configs || undefined}
+                        onRoundComplete={handleRoundComplete}
+                        onAllComplete={completeMain}
+                      />
+                    ) : (
+                      <>
+                        {exercisesBySection.main.map((workoutExercise) => (
+                          <ExerciseCard
+                            key={workoutExercise.id}
+                            exercise={workoutExercise.exercise}
+                            workoutExercise={workoutExercise}
+                            sessionId={session.id}
+                            onSetComplete={() => {}}
+                            onFeedback={(feedback) => {
+                              handleExerciseComplete(workoutExercise.exercise.id);
+                            }}
+                            showFeedback={true}
+                          />
+                        ))}
+                        
+                        {/* Bouton pour terminer le corps de séance */}
+                        {completedExercises.size === exercisesBySection.main.length && exercisesBySection.main.length > 0 && (
+                          <Card className="sticky bottom-4 bg-gradient-to-r from-primary/10 to-primary/5">
+                            <CardContent className="p-6">
+                              <Button 
+                                onClick={completeMain} 
+                                size="lg" 
+                                className="w-full h-14 text-lg"
+                              >
+                                <CheckCircle className="h-5 w-5 mr-2" />
+                                Terminer le corps de séance
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* ══════════════════════════════════════════
+                    SECTION 3 : RETOUR AU CALME (OPTIONNEL)
+                    ══════════════════════════════════════════ */}
+                {currentSection === 'cooldown' && exercisesBySection.cooldown.length > 0 && (
+                  <div className="space-y-4">
+                    {/* Header retour au calme */}
+                    <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-2 border-green-500">
+                      <CardContent className="p-6 text-center">
+                        <div className="text-4xl mb-2">🧘</div>
+                        <h2 className="text-2xl font-bold mb-2">Retour au calme</h2>
+                        <p className="text-muted-foreground mb-3">
+                          Récupération et étirements (optionnel)
+                        </p>
+                        <Badge variant="secondary">Optionnel</Badge>
+                      </CardContent>
+                    </Card>
+
+                    {/* Exercices de retour au calme */}
+                    {exercisesBySection.cooldown.map((workoutExercise) => (
+                      <ExerciseCard
+                        key={workoutExercise.id}
+                        exercise={workoutExercise.exercise}
+                        workoutExercise={workoutExercise}
+                        sessionId={session.id}
+                        onSetComplete={() => {}}
+                        onFeedback={null}
+                        showFeedback={false}
+                      />
+                    ))}
+
+                    {/* Boutons : Terminer le cooldown OU Passer */}
+                    <div className="sticky bottom-4 space-y-3">
+                      <Card className="bg-gradient-to-r from-primary/10 to-primary/5">
+                        <CardContent className="p-6">
+                          <Button 
+                            onClick={completeCooldown} 
+                            size="lg" 
+                            className="w-full h-14 text-lg mb-3"
+                          >
+                            <CheckCircle className="h-5 w-5 mr-2" />
+                            Terminer le retour au calme
+                          </Button>
+                          
+                          <Button 
+                            onClick={skipCooldown} 
+                            size="lg" 
+                            variant="outline"
+                            className="w-full"
+                          >
+                            Passer cette étape
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* No Exercises */}
             {exercises.length === 0 && sessionStarted && (

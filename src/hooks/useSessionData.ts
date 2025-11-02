@@ -34,6 +34,7 @@ export interface Session {
       tips?: string;
       variations?: string;
       order_index?: number;
+      section?: 'warmup' | 'main' | 'cooldown';
       exercise: {
         id: string;
         libelle: string;
@@ -114,7 +115,10 @@ export const useSessionData = (sessionId?: string) => {
             workout: {
               ...workoutData,
               circuit_configs: workoutData.circuit_configs as Array<{ rounds: number; rest: number }> | undefined,
-              workout_exercise: workoutExerciseData || []
+              workout_exercise: (workoutExerciseData || []).map(we => ({
+                ...we,
+                section: (we.section || 'main') as 'warmup' | 'main' | 'cooldown'
+              }))
             }
           };
 

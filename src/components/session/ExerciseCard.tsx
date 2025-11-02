@@ -40,6 +40,7 @@ interface ExerciseCardProps {
   sessionId: string;
   onSetComplete?: (setData: any) => void;
   onFeedback?: (feedback: any) => void;
+  showFeedback?: boolean;
 }
 
 interface SetLog {
@@ -55,7 +56,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   workoutExercise,
   sessionId,
   onSetComplete,
-  onFeedback
+  onFeedback,
+  showFeedback = true
 }) => {
   const { addOfflineData } = useOfflineSync();
   const [currentSet, setCurrentSet] = useState(1);
@@ -64,7 +66,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   const [currentWeight, setCurrentWeight] = useState(workoutExercise.charge_cible || 0);
   const [currentRPE, setCurrentRPE] = useState(5);
   const [showVideo, setShowVideo] = useState(false);
-  const [showFeedback, setShowFeedback] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedback, setFeedback] = useState({ difficulte: 5, plaisir: 5 });
   const [rpeDialogOpen, setRpeDialogOpen] = useState(false);
 
@@ -90,8 +92,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
     if (currentSet < totalSets) {
       setCurrentSet(prev => prev + 1);
-    } else {
-      setShowFeedback(true);
+    } else if (showFeedback) {
+      setShowFeedbackModal(true);
     }
   };
 
@@ -106,7 +108,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
     addOfflineData('exercise_feedback', feedbackData);
     onFeedback?.(feedbackData);
-    setShowFeedback(false);
+    setShowFeedbackModal(false);
   };
 
   const isShort = exercise.youtube_url ? isYouTubeShort(exercise.youtube_url) : false;
@@ -338,7 +340,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         )}
 
         {/* Feedback Modal */}
-        {showFeedback && (
+        {showFeedback && showFeedbackModal && (
           <div className="space-y-4 p-4 border-2 border-primary rounded-lg bg-primary/5">
             <h4 className="font-medium">Feedback sur l'exercice</h4>
             
