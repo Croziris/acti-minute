@@ -124,47 +124,7 @@ export const useSessionData = (sessionId?: string) => {
         // 2. Essayer de charger via session_workout (sessions combinées)
         const { data: sessionWorkouts, error: sessionWorkoutsError } = await supabase
           .from('session_workout')
-          .select(`
-            order_index,
-            workout (
-              id,
-              titre,
-              description,
-              duree_estimee,
-              workout_type,
-              session_type,
-              circuit_rounds,
-              temps_repos_tours_seconds,
-              nombre_circuits,
-              circuit_configs,
-              workout_exercise (
-                id,
-                exercise_id,
-                series,
-                reps,
-                temps_seconds,
-                charge_cible,
-                tempo,
-                couleur_elastique,
-                tips,
-                variations,
-                order_index,
-                circuit_number,
-                section,
-                rpe_cible,
-                temps_repos_seconds,
-                exercise (
-                  id,
-                  libelle,
-                  description,
-                  video_id,
-                  youtube_url,
-                  categories,
-                  groupes
-                )
-              )
-            )
-          `)
+          .select('order_index, workout_id')
           .eq('session_id', sessionId)
           .order('order_index');
 
@@ -172,31 +132,74 @@ export const useSessionData = (sessionId?: string) => {
           console.error('❌ Erreur session_workout:', sessionWorkoutsError);
         }
 
-        // 3. Déterminer le type de session et formater les données
+        console.log('📥 session_workout brut:', sessionWorkouts);
+
+        // 3. Si on a des workouts via session_workout, les charger manuellement
         if (sessionWorkouts && sessionWorkouts.length > 0) {
-          // SESSION COMBINÉE
           console.log(`✅ Session combinée: ${sessionWorkouts.length} workout(s)`);
           
-          sessionWorkouts.forEach((sw, idx) => {
-            console.log(`  Workout ${idx + 1}:`, {
-              id: sw.workout?.id,
-              titre: sw.workout?.titre,
-              nb_exercices: sw.workout?.workout_exercise?.length || 0
-            });
-          });
-
+          // Charger chaque workout avec ses exercices
+          const workoutsWithExercises = await Promise.all(
+            sessionWorkouts.map(async (sw) => {
+              // Charger le workout
+              const { data: workout, error: workoutError } = await supabase
+                .from('workout')
+                .select('*')
+                .eq('id', sw.workout_id)
+                .single();
+              
+              if (workoutError) {
+                console.error('❌ Erreur workout:', sw.workout_id, workoutError);
+                return null;
+              }
+              
+              // Charger les exercices du workout
+              const { data: exercises, error: exercisesError } = await supabase
+                .from('workout_exercise')
+                .select(`
+                  *,
+                  exercise:exercise_id (
+                    id,
+                    libelle,
+                    description,
+                    video_id,
+                    youtube_url,
+                    categories,
+                    groupes
+                  )
+                `)
+                .eq('workout_id', sw.workout_id)
+                .order('order_index');
+              
+              if (exercisesError) {
+                console.error('❌ Erreur exercices:', sw.workout_id, exercisesError);
+                return null;
+              }
+              
+              console.log(`  ✓ Workout "${workout.titre}": ${exercises?.length || 0} exercices`);
+              
+              return {
+                order_index: sw.order_index,
+                workout: {
+                  ...workout,
+                  session_type: workout.session_type as 'warmup' | 'main' | 'cooldown' | undefined,
+                  circuit_configs: workout.circuit_configs as Array<{ rounds: number; rest: number }> | undefined,
+                  workout_exercise: exercises || []
+                }
+              };
+            })
+          );
+          
+          const validWorkouts = workoutsWithExercises.filter(w => w !== null);
+          
+          console.log('📊 Workouts chargés:', validWorkouts.length);
+          
           setSession({
             ...sessionData,
             statut: sessionData.statut as Session['statut'],
-            session_workout: sessionWorkouts.map((sw: any) => ({
-              order_index: sw.order_index,
-              workout: {
-                ...sw.workout,
-                session_type: sw.workout.session_type as 'warmup' | 'main' | 'cooldown' | undefined,
-                circuit_configs: sw.workout.circuit_configs as Array<{ rounds: number; rest: number }> | undefined
-              }
-            }))
+            session_workout: validWorkouts
           });
+          
         } else if (sessionData.workout_id) {
           // SESSION SIMPLE (LEGACY)
           console.log('📋 Session simple - workout_id:', sessionData.workout_id);
