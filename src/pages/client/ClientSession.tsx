@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ExerciseCard } from "@/components/session/ExerciseCard";
 import { CircuitTrainingView } from "@/components/client/CircuitTrainingView";
+import { SessionCompleteCard } from "@/components/session/SessionCompleteCard";
 import { useSessionData } from "@/hooks/useSessionData";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { supabase } from "@/integrations/supabase/client";
@@ -308,39 +309,11 @@ const ClientSession = () => {
 
         {/* Complete Session */}
         {sessionStarted && !sessionCompleted && canComplete && (
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center mb-6">
-                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-600" />
-                <h3 className="text-lg font-semibold mb-2">Séance terminée !</h3>
-                <p className="text-muted-foreground mb-4">Félicitations, vous avez terminé tous les exercices.</p>
-              </div>
-
-              <div className="space-y-3 mb-6">
-                <label htmlFor="commentaire-fin" className="block text-sm font-medium">
-                  Commentaire de fin de séance
-                </label>
-                <p className="text-sm text-muted-foreground">
-                  Dis-moi comment s'est passée ta séance et comment tu t'es senti.e ! Ça me permettra d'adapter au mieux
-                  les prochaines séances.
-                </p>
-                <textarea
-                  id="commentaire-fin"
-                  value={commentaireFin}
-                  onChange={(e) => setCommentaireFin(e.target.value)}
-                  className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Partage ton ressenti sur la séance... exemple : j'ai eu une gène ici, j'ai bien aimé ça, ça c'était trop facile, ça trop difficile..."
-                />
-              </div>
-
-              <div className="text-center">
-                <Button onClick={completeSession} size="lg" className="bg-gradient-primary">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Confirmer la fin de séance
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <SessionCompleteCard 
+            sessionId={session.id}
+            commentaireFin={commentaireFin}
+            onCommentChange={setCommentaireFin}
+          />
         )}
 
         {/* WhatsApp Link */}

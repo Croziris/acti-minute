@@ -109,6 +109,12 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
     const config = getCircuitConfig(currentCircuitNumber);
     const globalTour = calculateGlobalTourNumber(currentCircuitIndex, currentRoundInCircuit);
     
+    // Vérifier qu'on ne dépasse pas le nombre de tours maximum
+    if (currentRoundInCircuit > config.rounds) {
+      console.error('Cannot validate more rounds than configured');
+      return;
+    }
+    
     // Sauvegarder tous les logs du tour en base de données
     try {
       const logsToSave = currentCircuitExercises.map(ex => {
@@ -169,7 +175,7 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
       setCompletedCircuitNumber(currentCircuitNumber);
       setShowCircuitFeedback(true);
     }
-    // CAS 3 : Dernier tour du dernier circuit
+    // CAS 3 : Dernier tour du dernier circuit → Fin de séance
     else {
       setShowFinalFeedback(true);
     }
@@ -353,29 +359,32 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
           </div>
 
           {/* Bouton de validation global */}
-          <Card className="sticky bottom-4 mt-6 bg-gradient-to-r from-primary/10 to-primary/5">
-            <CardContent className="pt-6">
+          <Card className="sticky bottom-4 mt-6 bg-gradient-to-r from-primary/10 to-primary/5 shadow-lg">
+            <CardContent className="pt-6 pb-6">
               <Button 
                 onClick={handleValidateTour}
-                disabled={restingCircuit !== null}
+                disabled={
+                  restingCircuit !== null || 
+                  currentRoundInCircuit > currentCircuitConfig.rounds
+                }
                 size="lg"
-                className="w-full"
+                className="w-full min-h-[64px] flex items-center justify-center"
               >
-                <div className="flex flex-col items-center gap-1">
-                  <span className="text-lg font-semibold">
+                <div className="flex flex-col items-center gap-1.5 w-full">
+                  <span className="text-lg font-semibold leading-tight">
                     Tour {currentRoundInCircuit}/{currentCircuitConfig.rounds}
                     {currentRoundInCircuit <= currentCircuitConfig.rounds && " - En cours"}
                   </span>
                   
-                  {restingCircuit === null ? (
-                    <span className="text-sm opacity-90">
+                  {restingCircuit === null && currentRoundInCircuit <= currentCircuitConfig.rounds ? (
+                    <span className="text-sm opacity-90 leading-tight">
                       Appuyer pour finir le tour
                     </span>
-                  ) : (
-                    <span className="text-sm opacity-75">
+                  ) : restingCircuit !== null ? (
+                    <span className="text-sm opacity-75 leading-tight">
                       Repos en cours...
                     </span>
-                  )}
+                  ) : null}
                 </div>
               </Button>
             </CardContent>
