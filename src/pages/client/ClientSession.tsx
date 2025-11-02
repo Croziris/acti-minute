@@ -8,6 +8,7 @@ import { ExerciseCard } from "@/components/session/ExerciseCard";
 import { CircuitTrainingView } from "@/components/client/CircuitTrainingView";
 import { SessionCompleteCard } from "@/components/session/SessionCompleteCard";
 import { Textarea } from "@/components/ui/textarea";
+import { SessionFeedbackModal } from "@/components/session/SessionFeedbackModal";
 import { useSessionData } from "@/hooks/useSessionData";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +29,7 @@ const ClientSession = () => {
   const [coachPhone, setCoachPhone] = useState<string>('');
   const [showValidationScreen, setShowValidationScreen] = useState(false);
   const [showContactScreen, setShowContactScreen] = useState(false);
+  const [showFinalFeedback, setShowFinalFeedback] = useState(false);
 
   useEffect(() => {
     if (session?.statut === "ongoing") {
@@ -178,8 +180,48 @@ const ClientSession = () => {
     const allExerciseIds = exercises.map((e) => e.exercise.id);
     setCompletedExercises(new Set(allExerciseIds));
     
-    // Passer à l'écran de validation (félicitations)
-    setShowValidationScreen(true);
+    // Afficher le modal de feedback final
+    setShowFinalFeedback(true);
+  };
+
+  const handleFinalFeedbackSubmit = async (feedback: {
+    rpe: number;
+    difficulte: number;
+    plaisir: number;
+    commentaire?: string;
+  }) => {
+    if (!session || !user) return;
+
+    try {
+      // Enregistrer le feedback final en DB
+      const { error } = await supabase.from('exercise_feedback').insert({
+        session_id: session.id,
+        exercise_id: null, // null = feedback global de séance
+        difficulte_0_10: feedback.difficulte,
+        plaisir_0_10: feedback.plaisir,
+        created_at: new Date().toISOString(),
+      });
+
+      if (error) throw error;
+
+      console.log("✅ Feedback final enregistré");
+      
+      // Fermer le modal
+      setShowFinalFeedback(false);
+      
+      // Sauvegarder le commentaire pour l'écran suivant
+      setCommentaireFin(feedback.commentaire || '');
+      
+      // Passer à l'écran de félicitations
+      setShowValidationScreen(true);
+    } catch (error) {
+      console.error('Error submitting final feedback:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'enregistrer le feedback",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -235,9 +277,30 @@ const ClientSession = () => {
     ? completedExercises.size === exercises.length // Tous les exercices marqués comme complétés par le circuit
     : completionRate >= 100 || completedExercises.size === exercises.length;
 
+  // Détecter automatiquement la fin de séance CLASSIQUE
+  useEffect(() => {
+    if (!isCircuitWorkout && 
+        sessionStarted && 
+        !showValidationScreen && 
+        !showFinalFeedback &&
+        completedExercises.size === exercises.length && 
+        exercises.length > 0) {
+      
+      console.log("🎯 Détection fin de séance classique - tous les exercices complétés");
+      setShowFinalFeedback(true);
+    }
+  }, [completedExercises, exercises.length, isCircuitWorkout, sessionStarted, showValidationScreen, showFinalFeedback]);
+
   return (
     <ClientLayout>
       <div className="space-y-6">
+        {/* Modal de feedback final (commun circuits + classiques) */}
+        <SessionFeedbackModal
+          open={showFinalFeedback}
+          onOpenChange={setShowFinalFeedback}
+          onSubmit={handleFinalFeedbackSubmit}
+        />
+
         {/* ÉCRAN 1 : VALIDATION DE LA SÉANCE (après feedback final) */}
         {showValidationScreen && !showContactScreen ? (
           <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-2 border-green-200 dark:border-green-800">
