@@ -122,56 +122,76 @@ export const useSessionData = (sessionId?: string) => {
               circuit_rounds,
               temps_repos_tours_seconds,
               nombre_circuits,
-              circuit_configs
+              circuit_configs,
+              workout_exercise (
+                id,
+                exercise_id,
+                series,
+                reps,
+                temps_seconds,
+                charge_cible,
+                tempo,
+                couleur,
+                couleur_elastique,
+                tips,
+                variations,
+                order_index,
+                circuit_number,
+                rpe_cible,
+                temps_repos_seconds,
+                exercise:exercise_id (
+                  id,
+                  libelle,
+                  description,
+                  video_id,
+                  youtube_url,
+                  categories,
+                  groupes
+                )
+              )
             )
           `)
           .eq('session_id', sessionId)
           .order('order_index');
 
-        if (sessionWorkoutsError) throw sessionWorkoutsError;
+        if (sessionWorkoutsError) {
+          console.error('❌ Erreur chargement session_workout:', sessionWorkoutsError);
+          throw sessionWorkoutsError;
+        }
 
-        // Si on a des workouts via session_workout, charger leurs exercices
+        // Si session combinée : utiliser session_workout
         if (sessionWorkouts && sessionWorkouts.length > 0) {
-          const workoutsWithExercises = await Promise.all(
-            sessionWorkouts.map(async (sw: any) => {
-              const { data: workoutExerciseData, error: workoutExerciseError } = await supabase
-                .from('workout_exercise')
-                .select(`
-                  *,
-                  exercise:exercise_id (
-                    id,
-                    libelle,
-                    description,
-                    video_id,
-                    youtube_url,
-                    categories,
-                    groupes
-                  )
-                `)
-                .eq('workout_id', sw.workout.id)
-                .order('order_index');
+          console.log(`✅ Session combinée détectée: ${sessionWorkouts.length} workout(s)`);
+          
+          // Trier les exercices de chaque workout par order_index
+          const workoutsWithSortedExercises = sessionWorkouts.map((sw: any) => ({
+            order_index: sw.order_index,
+            workout: {
+              ...sw.workout,
+              session_type: sw.workout.session_type as 'warmup' | 'main' | 'cooldown' | undefined,
+              circuit_configs: sw.workout.circuit_configs as Array<{ rounds: number; rest: number }> | undefined,
+              workout_exercise: (sw.workout.workout_exercise || []).sort(
+                (a: any, b: any) => (a.order_index || 0) - (b.order_index || 0)
+              )
+            }
+          }));
 
-              if (workoutExerciseError) throw workoutExerciseError;
-
-              return {
-                order_index: sw.order_index,
-                workout: {
-                  ...sw.workout,
-                  session_type: sw.workout.session_type as 'warmup' | 'main' | 'cooldown' | undefined,
-                  circuit_configs: sw.workout.circuit_configs as Array<{ rounds: number; rest: number }> | undefined,
-                  workout_exercise: workoutExerciseData || []
-                }
-              };
-            })
-          );
+          console.log('📦 Données session combinée:', {
+            nb_workouts: workoutsWithSortedExercises.length,
+            workouts: workoutsWithSortedExercises.map(sw => ({
+              titre: sw.workout.titre,
+              nb_exercices: sw.workout.workout_exercise?.length || 0
+            }))
+          });
 
           setSession({
             ...sessionData,
             statut: sessionData.statut as Session['statut'],
-            session_workout: workoutsWithExercises
+            session_workout: workoutsWithSortedExercises
           });
         } else if (sessionData.workout_id) {
           // Fallback: ancien système avec workout_id direct
+          console.log('📋 Session simple (legacy) détectée - workout_id:', sessionData.workout_id);
           const { data: workoutData, error: workoutError } = await supabase
             .from('workout')
             .select(`
@@ -220,6 +240,11 @@ export const useSessionData = (sessionId?: string) => {
               workout_exercise: workoutExerciseData || []
             }
           };
+
+          console.log('✅ Session simple chargée:', {
+            workout_titre: workoutData.titre,
+            nb_exercices: workoutExerciseData?.length || 0
+          });
 
           setSession(combinedData);
         } else {
