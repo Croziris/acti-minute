@@ -21,6 +21,7 @@ export type Database = {
           credential_id: string | null
           handle: string | null
           id: string
+          phone: string | null
           role: string
         }
         Insert: {
@@ -29,6 +30,7 @@ export type Database = {
           credential_id?: string | null
           handle?: string | null
           id?: string
+          phone?: string | null
           role: string
         }
         Update: {
@@ -37,6 +39,7 @@ export type Database = {
           credential_id?: string | null
           handle?: string | null
           id?: string
+          phone?: string | null
           role?: string
         }
         Relationships: [
@@ -87,6 +90,41 @@ export type Database = {
           titre?: string | null
         }
         Relationships: []
+      }
+      circuit_progress: {
+        Row: {
+          circuit_number: number
+          completed_rounds: number
+          exercise_data: Json | null
+          id: string
+          session_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          circuit_number: number
+          completed_rounds?: number
+          exercise_data?: Json | null
+          id?: string
+          session_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          circuit_number?: number
+          completed_rounds?: number
+          exercise_data?: Json | null
+          id?: string
+          session_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "circuit_progress_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       client_routines: {
         Row: {

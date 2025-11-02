@@ -24,6 +24,7 @@ const ClientSession = () => {
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set());
   const [sessionCompleted, setSessionCompleted] = useState(false);
   const [commentaireFin, setCommentaireFin] = useState("");
+  const [coachPhone, setCoachPhone] = useState<string>('');
 
   useEffect(() => {
     if (session?.statut === "ongoing") {
@@ -31,6 +32,22 @@ const ClientSession = () => {
     }
     if (session?.statut === "done") {
       setSessionCompleted(true);
+    }
+    
+    // Charger les informations du coach pour WhatsApp
+    if (session?.client_id) {
+      supabase
+        .from('program')
+        .select('coach_id, app_user!program_coach_id_fkey(phone)')
+        .eq('client_id', session.client_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.app_user?.phone) {
+            setCoachPhone(data.app_user.phone);
+          }
+        });
     }
   }, [session]);
 
@@ -130,9 +147,11 @@ const ClientSession = () => {
   };
 
   const handleCircuitComplete = () => {
+    console.log("🎉 handleCircuitComplete appelé dans ClientSession");
     // Marquer tous les exercices comme complétés
     const allExerciseIds = exercises.map((e) => e.exercise.id);
     setCompletedExercises(new Set(allExerciseIds));
+    setSessionCompleted(true);
   };
 
   if (loading) {
@@ -308,9 +327,10 @@ const ClientSession = () => {
           ))}
 
         {/* Complete Session */}
-        {sessionStarted && !sessionCompleted && canComplete && (
+        {sessionStarted && sessionCompleted && canComplete && (
           <SessionCompleteCard 
             sessionId={session.id}
+            coachPhoneNumber={coachPhone}
             commentaireFin={commentaireFin}
             onCommentChange={setCommentaireFin}
           />

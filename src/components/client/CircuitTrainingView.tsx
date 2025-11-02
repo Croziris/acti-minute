@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -82,6 +82,50 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
   // Stocker les données de tous les exercices par circuit et tour
   const [exerciseData, setExerciseData] = useState<Record<string, { reps: number; charge: number }>>({});
 
+  // Restaurer la progression au chargement
+  useEffect(() => {
+    async function loadProgress() {
+      try {
+        const { data, error } = await supabase
+          .from('circuit_progress')
+          .select('*')
+          .eq('session_id', sessionId);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          console.log("📂 Progression trouvée:", data);
+          
+          // Restaurer les tours complétés
+          const restoredRounds: Record<number, number> = {};
+          let restoredExerciseData: Record<string, any> = {};
+          
+          data.forEach(progress => {
+            restoredRounds[progress.circuit_number] = progress.completed_rounds;
+            restoredExerciseData = {
+              ...restoredExerciseData,
+              ...(progress.exercise_data && typeof progress.exercise_data === 'object' ? progress.exercise_data : {})
+            };
+          });
+          
+          setCompletedRoundsByCircuit(restoredRounds);
+          setExerciseData(restoredExerciseData);
+          
+          toast({
+            title: "Progression restaurée",
+            description: "Reprise de ta séance là où tu l'avais laissée",
+          });
+          
+          console.log("✅ Progression restaurée:", restoredRounds);
+        }
+      } catch (error) {
+        console.error('Erreur chargement progression:', error);
+      }
+    }
+
+    loadProgress();
+  }, [sessionId]);
+
   // Grouper les exercices par circuit
   const exercisesByCircuit = exercises.reduce((acc, exercise) => {
     const circuitNum = exercise.circuit_number || 1;
@@ -105,9 +149,36 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
     }));
   };
 
+  // Sauvegarder la progression automatiquement
+  const saveProgress = async (circuitNumber: number, roundsCompleted: number, currentExerciseData: Record<string, any>) => {
+    try {
+      const { error } = await supabase
+        .from('circuit_progress')
+        .upsert({
+          session_id: sessionId,
+          circuit_number: circuitNumber,
+          completed_rounds: roundsCompleted,
+          exercise_data: currentExerciseData,
+        }, {
+          onConflict: 'session_id,circuit_number'
+        });
+
+      if (error) throw error;
+      
+      console.log(`✅ Progression sauvegardée : Circuit ${circuitNumber}, Tour ${roundsCompleted}`);
+    } catch (error) {
+      console.error('Erreur sauvegarde progression:', error);
+    }
+  };
+
   const handleValidateTour = async () => {
     const config = getCircuitConfig(currentCircuitNumber);
     const globalTour = calculateGlobalTourNumber(currentCircuitIndex, currentRoundInCircuit);
+    
+    console.log("=== DÉBUT handleValidateTour ===");
+    console.log("Circuit actuel:", currentCircuitNumber);
+    console.log("Tour actuel:", currentRoundInCircuit);
+    console.log("Config du circuit:", config);
     
     // Vérifier qu'on ne dépasse pas le nombre de tours maximum
     if (currentRoundInCircuit > config.rounds) {
@@ -133,7 +204,7 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
 
       toast({
         title: "Tour enregistré",
-        description: `Tour ${currentRoundInCircuit}/${config.rounds} validé`,
+        description: `Circuit ${currentCircuitNumber} - Tour ${currentRoundInCircuit}/${config.rounds} validé`,
       });
     } catch (error) {
       console.error('Error saving logs:', error);
@@ -148,14 +219,38 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
     onRoundComplete(globalTour);
 
     // Mettre à jour l'état des tours complétés
-    setCompletedRoundsByCircuit(prev => ({
-      ...prev,
+    const newCompletedRounds = {
+      ...completedRoundsByCircuit,
       [currentCircuitNumber]: currentRoundInCircuit
-    }));
+    };
+    
+    setCompletedRoundsByCircuit(newCompletedRounds);
+    console.log("Tours complétés après mise à jour:", newCompletedRounds);
+    
+    // Sauvegarder la progression automatiquement
+    await saveProgress(currentCircuitNumber, currentRoundInCircuit, exerciseData);
 
-    // CAS 1 : Pas le dernier tour de ce circuit
+    // DÉTERMINER si c'est le dernier tour du circuit actuel
+    const isLastRoundOfThisCircuit = currentRoundInCircuit >= config.rounds;
+    console.log("Dernier tour de ce circuit ?", isLastRoundOfThisCircuit);
+
+    // DÉTERMINER si tous les circuits sont terminés
+    const allCircuitsCompleted = Array.from({ length: nombreCircuits }, (_, i) => i + 1)
+      .every(num => {
+        const circuitConfig = getCircuitConfig(num);
+        const completed = num === currentCircuitNumber 
+          ? currentRoundInCircuit 
+          : (newCompletedRounds[num] || 0);
+        
+        console.log(`Circuit ${num}: ${completed}/${circuitConfig.rounds} tours`);
+        return completed >= circuitConfig.rounds;
+      });
+    
+    console.log("TOUS les circuits terminés ?", allCircuitsCompleted);
+
+    // CAS 1 : Pas le dernier tour de ce circuit → Repos puis tour suivant
     if (currentRoundInCircuit < config.rounds) {
-      // Démarrer le repos entre tours
+      console.log("Tour suivant après repos");
       setRestingCircuit(currentCircuitNumber);
       setRestRemaining(config.rest);
       
@@ -170,15 +265,28 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
         });
       }, 1000);
     } 
-    // CAS 2 : Dernier tour de ce circuit, mais pas le dernier circuit
+    // CAS 2 : TOUS LES CIRCUITS SONT TERMINÉS → Fin de séance
+    else if (allCircuitsCompleted) {
+      console.log("🎉 FIN DE SÉANCE DÉTECTÉE");
+      
+      // Supprimer la progression sauvegardée
+      await supabase
+        .from('circuit_progress')
+        .delete()
+        .eq('session_id', sessionId);
+      
+      console.log("🗑️ Progression supprimée (séance terminée)");
+      
+      setShowFinalFeedback(true);
+    }
+    // CAS 3 : Dernier tour de ce circuit, mais pas le dernier circuit → Feedback circuit
     else if (currentCircuitIndex < nombreCircuits - 1) {
+      console.log("Dernier tour du circuit", currentCircuitNumber, "→ Feedback circuit");
       setCompletedCircuitNumber(currentCircuitNumber);
       setShowCircuitFeedback(true);
     }
-    // CAS 3 : Dernier tour du dernier circuit → Fin de séance
-    else {
-      setShowFinalFeedback(true);
-    }
+    
+    console.log("=== FIN handleValidateTour ===");
   };
 
   const handleCircuitFeedbackSubmit = async () => {
@@ -222,6 +330,7 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
         plaisir_0_10: sessionPlaisir,
       });
 
+      console.log("✅ Feedback final enregistré - Appel onAllComplete()");
       setShowFinalFeedback(false);
       onAllComplete();
     } catch (error) {
