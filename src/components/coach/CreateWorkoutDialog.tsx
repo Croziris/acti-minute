@@ -14,6 +14,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Info } from 'lucide-react';
 
 interface Props {
   open: boolean;
@@ -26,6 +27,7 @@ export const CreateWorkoutDialog: React.FC<Props> = ({ open, onOpenChange, onSuc
   const [description, setDescription] = useState('');
   const [dureeEstimee, setDureeEstimee] = useState('');
   const [workoutType, setWorkoutType] = useState<'classic' | 'circuit'>('classic');
+  const [sessionType, setSessionType] = useState<'warmup' | 'main' | 'cooldown'>('main');
   const [nombreCircuits, setNombreCircuits] = useState('1');
   const [circuitConfigs, setCircuitConfigs] = useState([{ rounds: '3', rest: '60' }]);
   const [loading, setLoading] = useState(false);
@@ -36,6 +38,7 @@ export const CreateWorkoutDialog: React.FC<Props> = ({ open, onOpenChange, onSuc
     setDescription('');
     setDureeEstimee('');
     setWorkoutType('classic');
+    setSessionType('main');
     setNombreCircuits('1');
     setCircuitConfigs([{ rounds: '3', rest: '60' }]);
   };
@@ -94,6 +97,7 @@ export const CreateWorkoutDialog: React.FC<Props> = ({ open, onOpenChange, onSuc
           description: description.trim() || null,
           duree_estimee: dureeEstimee ? parseInt(dureeEstimee) : null,
           workout_type: workoutType,
+          session_type: sessionType,
           nombre_circuits: workoutType === 'circuit' ? circuitConfigs.length : 1,
           circuit_configs: workoutType === 'circuit' ? configs : null,
           // Garder la compatibilité avec l'ancien système
@@ -170,7 +174,7 @@ export const CreateWorkoutDialog: React.FC<Props> = ({ open, onOpenChange, onSuc
           </div>
 
           <div className="space-y-3">
-            <Label>Type de séance *</Label>
+            <Label>Format de séance *</Label>
             <RadioGroup value={workoutType} onValueChange={(value) => setWorkoutType(value as 'classic' | 'circuit')}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="classic" id="classic" />
@@ -185,6 +189,65 @@ export const CreateWorkoutDialog: React.FC<Props> = ({ open, onOpenChange, onSuc
                 </Label>
               </div>
             </RadioGroup>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="session-type" className="flex items-center gap-2">
+              Type de section
+              <Info className="h-4 w-4 text-muted-foreground" />
+            </Label>
+            
+            <Select 
+              value={sessionType} 
+              onValueChange={(value: 'warmup' | 'main' | 'cooldown') => setSessionType(value)}
+            >
+              <SelectTrigger id="session-type">
+                <SelectValue placeholder="Sélectionner le type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="warmup">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">🔥</span>
+                    <div className="text-left">
+                      <div className="font-medium">Échauffement</div>
+                      <div className="text-xs text-muted-foreground">
+                        Préparation du corps (sans feedback)
+                      </div>
+                    </div>
+                  </div>
+                </SelectItem>
+                
+                <SelectItem value="main">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">💪</span>
+                    <div className="text-left">
+                      <div className="font-medium">Séance Principale</div>
+                      <div className="text-xs text-muted-foreground">
+                        Effort principal (avec feedbacks)
+                      </div>
+                    </div>
+                  </div>
+                </SelectItem>
+                
+                <SelectItem value="cooldown">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">🧘</span>
+                    <div className="text-left">
+                      <div className="font-medium">Retour au Calme</div>
+                      <div className="text-xs text-muted-foreground">
+                        Récupération (optionnel, sans feedback)
+                      </div>
+                    </div>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <p className="text-xs text-muted-foreground">
+              {sessionType === 'warmup' && '🔥 Cette séance sera proposée en début d\'entraînement pour préparer le corps.'}
+              {sessionType === 'main' && '💪 Cette séance constitue l\'effort principal avec feedbacks RPE, difficulté et plaisir.'}
+              {sessionType === 'cooldown' && '🧘 Cette séance sera proposée en fin d\'entraînement (le client peut la passer).'}
+            </p>
           </div>
 
           {workoutType === 'circuit' && (

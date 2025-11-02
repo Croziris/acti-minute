@@ -789,6 +789,7 @@ export type Database = {
           is_template: boolean | null
           nombre_circuits: number | null
           program_id: string | null
+          session_type: string | null
           temps_repos_tours_seconds: number | null
           titre: string | null
           workout_type: string | null
@@ -803,6 +804,7 @@ export type Database = {
           is_template?: boolean | null
           nombre_circuits?: number | null
           program_id?: string | null
+          session_type?: string | null
           temps_repos_tours_seconds?: number | null
           titre?: string | null
           workout_type?: string | null
@@ -817,6 +819,7 @@ export type Database = {
           is_template?: boolean | null
           nombre_circuits?: number | null
           program_id?: string | null
+          session_type?: string | null
           temps_repos_tours_seconds?: number | null
           titre?: string | null
           workout_type?: string | null
@@ -842,7 +845,6 @@ export type Database = {
           order_index: number | null
           reps: number | null
           rpe_cible: number | null
-          section: string | null
           series: number | null
           tempo: string | null
           temps_repos_seconds: number | null
@@ -861,7 +863,6 @@ export type Database = {
           order_index?: number | null
           reps?: number | null
           rpe_cible?: number | null
-          section?: string | null
           series?: number | null
           tempo?: string | null
           temps_repos_seconds?: number | null
@@ -880,7 +881,6 @@ export type Database = {
           order_index?: number | null
           reps?: number | null
           rpe_cible?: number | null
-          section?: string | null
           series?: number | null
           tempo?: string | null
           temps_repos_seconds?: number | null

@@ -25,6 +25,7 @@ interface Workout {
   description: string | null;
   duree_estimee: number | null;
   workout_type: 'classic' | 'circuit';
+  session_type: 'warmup' | 'main' | 'cooldown';
   circuit_rounds: number | null;
   nombre_circuits: number;
   circuit_configs: Array<{ rounds: number; rest: number }> | null;
@@ -68,6 +69,7 @@ const CoachWorkouts = () => {
             description: workout.description,
             duree_estimee: workout.duree_estimee,
             workout_type: (workout.workout_type || 'classic') as 'classic' | 'circuit',
+            session_type: (workout.session_type || 'main') as 'warmup' | 'main' | 'cooldown',
             circuit_rounds: workout.circuit_rounds,
             nombre_circuits: workout.nombre_circuits || 1,
             circuit_configs: workout.circuit_configs || [{ rounds: 3, rest: 60 }],
@@ -294,8 +296,28 @@ const CoachWorkouts = () => {
             {workouts.map((workout) => (
               <Card key={workout.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-start gap-2">
                     <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        {workout.session_type === 'warmup' && (
+                          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300">
+                            🔥 Échauffement
+                          </Badge>
+                        )}
+                        {workout.session_type === 'main' && (
+                          <Badge variant="default" className="bg-blue-600">
+                            💪 Principale
+                          </Badge>
+                        )}
+                        {workout.session_type === 'cooldown' && (
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                            🧘 Retour au Calme
+                          </Badge>
+                        )}
+                        <Badge variant={workout.workout_type === 'circuit' ? 'default' : 'secondary'}>
+                          {workout.workout_type === 'circuit' ? 'Circuit' : 'Classique'}
+                        </Badge>
+                      </div>
                       <CardTitle className="text-lg">{workout.titre}</CardTitle>
                       {workout.description && (
                         <CardDescription className="mt-1">
@@ -303,9 +325,6 @@ const CoachWorkouts = () => {
                         </CardDescription>
                       )}
                     </div>
-                    <Badge variant={workout.workout_type === 'circuit' ? 'default' : 'secondary'}>
-                      {workout.workout_type === 'circuit' ? 'Circuit' : 'Classique'}
-                    </Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
