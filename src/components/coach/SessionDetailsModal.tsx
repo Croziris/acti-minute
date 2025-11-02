@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, CheckCircle2, XCircle, Dumbbell, Star, MessageSquare, AlertCircle } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, Dumbbell, Star, MessageSquare, AlertCircle, Layers } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -39,6 +39,14 @@ interface SessionDetails {
   date_demarree: string | null;
   date_terminee: string | null;
   commentaire_fin: string | null;
+  isCombined?: boolean;
+  workouts?: Array<{
+    id: string;
+    titre: string;
+    workout_type: string;
+    session_type?: string;
+    circuit_rounds: number | null;
+  }>;
   workout: {
     titre: string;
     workout_type: string;
@@ -50,6 +58,9 @@ interface SessionDetails {
       reps: number | null;
       charge_cible: number | null;
       rpe_cible: number | null;
+      workout_id?: string;
+      workout_titre?: string;
+      workout_session_type?: string;
       exercise: {
         libelle: string;
       };
@@ -79,7 +90,7 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
     try {
       setLoading(true);
 
-      // Récupérer les détails de la séance
+      // Récupérer les détails de la séance (combinée ou simple)
       const { data: sessionData, error: sessionError } = await supabase
         .from('session')
         .select(`
@@ -88,19 +99,25 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
           date_demarree,
           date_terminee,
           commentaire_fin,
-          workout:workout_id (
-            titre,
-            workout_type,
-            circuit_rounds,
-            workout_exercises:workout_exercise (
-              exercise_id,
-              order_index,
-              series,
-              reps,
-              charge_cible,
-              rpe_cible,
-              exercise:exercise_id (
-                libelle
+          workout_id,
+          session_workout (
+            order_index,
+            workout (
+              id,
+              titre,
+              workout_type,
+              session_type,
+              circuit_rounds,
+              workout_exercise (
+                exercise_id,
+                order_index,
+                series,
+                reps,
+                charge_cible,
+                rpe_cible,
+                exercise (
+                  libelle
+                )
               )
             )
           )
@@ -133,7 +150,39 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
       const circuitFbs = (feedbacksData || []).filter(f => f.feedback_type === 'circuit' && f.exercise_id === null);
       const finalFb = (feedbacksData || []).find(f => f.feedback_type === 'session' && f.exercise_id === null);
 
-      setSession(sessionData as any);
+      // Transformer les données pour supporter les sessions combinées
+      const isCombined = sessionData.session_workout && sessionData.session_workout.length > 0;
+      
+      let transformedSession;
+      if (isCombined) {
+        // Session combinée : agréger tous les workouts
+        const workouts = sessionData.session_workout
+          .sort((a: any, b: any) => a.order_index - b.order_index)
+          .map((sw: any) => sw.workout);
+        
+        transformedSession = {
+          ...sessionData,
+          isCombined: true,
+          workouts: workouts,
+          workout: {
+            titre: 'Session combinée',
+            workout_type: 'combined',
+            circuit_rounds: null,
+            workout_exercises: workouts.flatMap((w: any) => 
+              (w.workout_exercise || []).map((we: any) => ({
+                ...we,
+                workout_id: w.id,
+                workout_titre: w.titre,
+                workout_session_type: w.session_type
+              }))
+            )
+          }
+        };
+      } else {
+        transformedSession = sessionData;
+      }
+
+      setSession(transformedSession as any);
       setSetLogs(logsData || []);
       setFeedbacks(exerciseFeedbacks);
       setCircuitFeedbacks(circuitFbs);
@@ -196,10 +245,17 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <StatusIcon className={`h-5 w-5 ${statusInfo.color}`} />
+            {session.isCombined && <Layers className="h-5 w-5 text-purple-600" />}
             {session.workout.titre}
           </DialogTitle>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Badge variant="outline">{statusInfo.label}</Badge>
+            {session.isCombined && (
+              <Badge variant="secondary" className="gap-1">
+                <Layers className="h-3 w-3" />
+                {session.workouts?.length} séances
+              </Badge>
+            )}
             {duration && (
               <span className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
@@ -362,27 +418,77 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
                   Cette séance n'a pas encore été commencée par le client.
                 </p>
               </div>
-              <div className="space-y-4">
-                <h3 className="font-semibold">Exercices prévus :</h3>
-                {session.workout.workout_exercises
-                  .sort((a, b) => a.order_index - b.order_index)
-                  .map((we, idx) => (
-                    <Card key={we.exercise_id}>
-                      <CardHeader>
-                        <CardTitle className="text-lg">
-                          {idx + 1}. {we.exercise.libelle}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-sm text-muted-foreground">
-                          {we.series} × {we.reps} reps
-                          {we.charge_cible && ` @ ${we.charge_cible}kg`}
-                          {we.rpe_cible && ` (RPE ${we.rpe_cible})`}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-              </div>
+              
+              {/* Affichage des workouts pour sessions combinées */}
+              {session.isCombined && session.workouts ? (
+                <div className="space-y-6">
+                  {session.workouts.map((workout, wIdx) => {
+                    const workoutExercises = session.workout.workout_exercises.filter(
+                      we => we.workout_id === workout.id
+                    );
+                    return (
+                      <Card key={workout.id} className="border-l-4 border-l-purple-500">
+                        <CardHeader className="bg-purple-50 dark:bg-purple-950/20">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="font-mono">
+                              {wIdx + 1}
+                            </Badge>
+                            <span className="text-xl">
+                              {workout.session_type === 'warmup' && '🔥'}
+                              {workout.session_type === 'main' && '💪'}
+                              {workout.session_type === 'cooldown' && '🧘'}
+                            </span>
+                            <CardTitle className="text-lg">{workout.titre}</CardTitle>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-4">
+                          <div className="space-y-3">
+                            {workoutExercises
+                              .sort((a, b) => a.order_index - b.order_index)
+                              .map((we, idx) => (
+                                <div key={we.exercise_id} className="flex items-start gap-2 text-sm">
+                                  <Badge variant="outline" className="text-xs mt-0.5">
+                                    {idx + 1}
+                                  </Badge>
+                                  <div className="flex-1">
+                                    <p className="font-medium">{we.exercise.libelle}</p>
+                                    <p className="text-muted-foreground text-xs">
+                                      {we.series} × {we.reps} reps
+                                      {we.charge_cible && ` @ ${we.charge_cible}kg`}
+                                      {we.rpe_cible && ` (RPE ${we.rpe_cible})`}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <h3 className="font-semibold">Exercices prévus :</h3>
+                  {session.workout.workout_exercises
+                    .sort((a, b) => a.order_index - b.order_index)
+                    .map((we, idx) => (
+                      <Card key={we.exercise_id}>
+                        <CardHeader>
+                          <CardTitle className="text-lg">
+                            {idx + 1}. {we.exercise.libelle}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-sm text-muted-foreground">
+                            {we.series} × {we.reps} reps
+                            {we.charge_cible && ` @ ${we.charge_cible}kg`}
+                            {we.rpe_cible && ` (RPE ${we.rpe_cible})`}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4">

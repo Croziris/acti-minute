@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Calendar, Clock, Dumbbell, Eye } from 'lucide-react';
+import { Plus, Trash2, Calendar, Clock, Dumbbell, Eye, Layers } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AssignWorkoutDialog } from '@/components/coach/AssignWorkoutDialog';
 import { SessionDetailsModal } from '@/components/coach/SessionDetailsModal';
@@ -32,11 +32,20 @@ interface Session {
   id: string;
   index_num: number;
   statut: string;
+  isCombined?: boolean;
+  workouts?: Array<{
+    id: string;
+    titre: string;
+    description: string | null;
+    duree_estimee: number | null;
+    workout_type: string;
+    session_type?: string;
+  }>;
   workout: {
     titre: string;
     description: string | null;
     duree_estimee: number | null;
-    workout_type: 'classic' | 'circuit';
+    workout_type: 'classic' | 'circuit' | 'combined';
     circuit_rounds: number | null;
   };
 }
@@ -64,7 +73,7 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
     try {
       setLoading(true);
 
-      // Récupérer tous les week_plans avec leurs sessions
+      // Récupérer tous les week_plans avec leurs sessions (combinées et simples)
       const { data: weekPlansData, error: weekPlansError } = await supabase
         .from('week_plan')
         .select(`
@@ -76,12 +85,18 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
             id,
             index_num,
             statut,
-            workout:workout_id (
-              titre,
-              description,
-              duree_estimee,
-              workout_type,
-              circuit_rounds
+            workout_id,
+            session_workout (
+              order_index,
+              workout (
+                id,
+                titre,
+                description,
+                duree_estimee,
+                workout_type,
+                circuit_rounds,
+                session_type
+              )
             )
           )
         `)
@@ -90,20 +105,40 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
 
       if (weekPlansError) throw weekPlansError;
 
-      // Organiser les données
+      // Organiser les données avec support des sessions combinées
       const organized = (weekPlansData || []).map(wp => ({
         id: wp.id,
         iso_week: wp.iso_week,
         start_date: wp.start_date,
         end_date: wp.end_date,
         sessions: (wp.session || [])
-          .filter((s: any) => s.workout)
-          .map((s: any) => ({
-            id: s.id,
-            index_num: s.index_num,
-            statut: s.statut,
-            workout: s.workout
-          }))
+          .map((s: any) => {
+            // Cas 1 : Session combinée (plusieurs workouts via session_workout)
+            if (s.session_workout && s.session_workout.length > 0) {
+              const workouts = s.session_workout
+                .sort((a: any, b: any) => a.order_index - b.order_index)
+                .map((sw: any) => sw.workout);
+              
+              return {
+                id: s.id,
+                index_num: s.index_num,
+                statut: s.statut,
+                isCombined: true,
+                workouts: workouts,
+                workout: {
+                  titre: workouts.map((w: any) => w.titre).join(' + '),
+                  description: `${workouts.length} séances combinées`,
+                  duree_estimee: workouts.reduce((sum: number, w: any) => sum + (w.duree_estimee || 0), 0),
+                  workout_type: 'combined' as const,
+                  circuit_rounds: null
+                }
+              };
+            }
+            
+            // Cas 2 : Session simple (pas de workouts via session_workout)
+            return null;
+          })
+          .filter((s: any) => s !== null)
           .sort((a: Session, b: Session) => a.index_num - b.index_num)
       }));
 
@@ -265,16 +300,24 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
                     {weekPlan.sessions.map((session) => (
                       <Card 
                         key={session.id} 
-                        className="border-l-4 border-l-primary cursor-pointer hover:shadow-md transition-shadow"
+                        className={`border-l-4 cursor-pointer hover:shadow-md transition-shadow ${
+                          session.isCombined ? 'border-l-purple-500' : 'border-l-primary'
+                        }`}
                         onClick={() => handleSessionClick(session)}
                       >
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
+                              <div className="flex items-center gap-2 mb-2 flex-wrap">
                                 <Badge variant="default">Séance {session.index_num}</Badge>
                                 {getStatusBadge(session.statut)}
-                                {session.workout.workout_type === 'circuit' && (
+                                {session.isCombined && (
+                                  <Badge variant="secondary" className="gap-1">
+                                    <Layers className="h-3 w-3" />
+                                    Combinée
+                                  </Badge>
+                                )}
+                                {!session.isCombined && session.workout.workout_type === 'circuit' && (
                                   <Badge variant="secondary">Circuit</Badge>
                                 )}
                                 <Badge variant="outline" className="gap-1">
@@ -282,11 +325,34 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
                                   Voir détails
                                 </Badge>
                               </div>
-                              <CardTitle className="text-lg">{session.workout.titre}</CardTitle>
-                              {session.workout.description && (
-                                <CardDescription className="mt-1">
-                                  {session.workout.description}
-                                </CardDescription>
+                              
+                              {session.isCombined && session.workouts ? (
+                                <div className="space-y-2">
+                                  <CardTitle className="text-lg mb-2">Session combinée</CardTitle>
+                                  {session.workouts.map((w, idx) => (
+                                    <div key={w.id} className="flex items-center gap-2 text-sm">
+                                      <Badge variant="outline" className="text-xs">
+                                        {idx + 1}
+                                      </Badge>
+                                      <span>
+                                        {w.session_type === 'warmup' && '🔥'}
+                                        {w.session_type === 'main' && '💪'}
+                                        {w.session_type === 'cooldown' && '🧘'}
+                                        {!w.session_type && '📋'}
+                                      </span>
+                                      <span className="font-medium">{w.titre}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <>
+                                  <CardTitle className="text-lg">{session.workout.titre}</CardTitle>
+                                  {session.workout.description && (
+                                    <CardDescription className="mt-1">
+                                      {session.workout.description}
+                                    </CardDescription>
+                                  )}
+                                </>
                               )}
                             </div>
                             <Button
@@ -310,7 +376,7 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
                                 <span>{session.workout.duree_estimee} min</span>
                               </div>
                             )}
-                            {session.workout.workout_type === 'circuit' && session.workout.circuit_rounds && (
+                            {!session.isCombined && session.workout.workout_type === 'circuit' && session.workout.circuit_rounds && (
                               <div className="flex items-center gap-1">
                                 <Dumbbell className="h-4 w-4" />
                                 <span>{session.workout.circuit_rounds} tour{session.workout.circuit_rounds > 1 ? 's' : ''}</span>

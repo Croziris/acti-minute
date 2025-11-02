@@ -14,7 +14,7 @@ import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { CheckCircle, Clock, AlertCircle, ArrowLeft, MessageCircle, Trophy } from "lucide-react";
+import { CheckCircle, Clock, AlertCircle, ArrowLeft, MessageCircle, Trophy, Layers } from "lucide-react";
 
 const ClientSession = () => {
   const { sessionId } = useParams();
@@ -572,26 +572,29 @@ const ClientSession = () => {
               </div>
             </div>
 
-            {/* Aperçu des workouts combinés */}
             {orderedWorkouts.length > 1 && sessionStarted && (
-              <Card className="bg-gradient-to-r from-primary/10 to-primary/5">
+              <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20 border-2 border-purple-500 sticky top-20 z-10">
                 <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold mb-3">
-                    📋 Session combinée ({orderedWorkouts.length} séances)
-                  </h3>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Layers className="h-5 w-5 text-purple-600" />
+                    <h3 className="text-lg font-bold">Session combinée ({orderedWorkouts.length} séances)</h3>
+                  </div>
                   <div className="space-y-2">
                     {orderedWorkouts.map((workout, index) => (
                       <div 
                         key={`overview-${index}`}
-                        className={`flex items-center gap-3 p-2 rounded ${
+                        className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
                           index === currentWorkoutIndex 
-                            ? 'bg-primary/20 border border-primary' 
-                            : index < currentWorkoutIndex 
-                              ? 'opacity-50' 
-                              : 'opacity-75'
+                            ? 'bg-purple-600 text-white shadow-lg scale-105' 
+                            : completedWorkouts.has(index)
+                              ? 'bg-green-100 dark:bg-green-900/30 opacity-75' 
+                              : 'bg-white dark:bg-gray-800 opacity-60'
                         }`}
                       >
-                        <Badge variant="outline" className="font-mono">
+                        <Badge 
+                          variant={index === currentWorkoutIndex ? 'default' : 'outline'} 
+                          className={`font-mono ${index === currentWorkoutIndex ? 'bg-white text-purple-600' : ''}`}
+                        >
                           {index + 1}
                         </Badge>
                         <span className="text-xl">
@@ -600,12 +603,16 @@ const ClientSession = () => {
                           {workout.session_type === 'cooldown' && '🧘'}
                           {!workout.session_type && '📋'}
                         </span>
-                        <span className="font-medium flex-1">{workout.titre}</span>
+                        <span className={`font-medium flex-1 ${index === currentWorkoutIndex ? 'font-bold' : ''}`}>
+                          {workout.titre}
+                        </span>
                         {completedWorkouts.has(index) && (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <CheckCircle className="h-5 w-5 text-green-600" />
                         )}
                         {index === currentWorkoutIndex && (
-                          <Badge variant="default">En cours</Badge>
+                          <Badge variant="default" className="bg-white text-purple-600">
+                            En cours
+                          </Badge>
                         )}
                       </div>
                     ))}
@@ -651,37 +658,85 @@ const ClientSession = () => {
                     </p>
                   </div>
 
-                  {/* Exercise Preview */}
-                  {exercises.length > 0 && (
-                    <div className="mb-6 p-4 bg-muted/30 rounded-lg">
-                      <p className="text-sm font-medium mb-3">
-                        {orderedWorkouts.length > 1 
-                          ? `Première séance : ${currentWorkout.titre}`
-                          : 'Voici les exercices de ta séance :'
-                        }
-                      </p>
-                      <ul className="space-y-2">
-                        {exercises.slice(0, 5).map((we, index) => (
-                          <li key={we.id} className="text-sm flex items-start gap-2">
-                            <Badge variant="outline" className="font-mono text-xs mt-0.5">
-                              {index + 1}
-                            </Badge>
-                            <span className="flex-1">{we.exercise.libelle}</span>
-                          </li>
-                        ))}
-                        {exercises.length > 5 && (
-                          <li className="text-xs text-muted-foreground italic">
-                            ... et {exercises.length - 5} autres exercices
-                          </li>
-                        )}
-                      </ul>
-                      {isCircuitWorkout && (
-                        <p className="text-xs text-muted-foreground mt-3 italic">
-                          Circuit de {currentWorkout.circuit_rounds} tours
-                        </p>
+                   <div className="mb-6 p-4 bg-muted/30 rounded-lg">
+                      {orderedWorkouts.length > 1 ? (
+                        <div className="space-y-4">
+                          <p className="text-sm font-medium mb-3">
+                            Session combinée de {orderedWorkouts.length} séances :
+                          </p>
+                          {orderedWorkouts.map((workout, wIdx) => {
+                            const workoutExercises = workout.workout_exercise || [];
+                            return (
+                              <Card key={`preview-${wIdx}`} className="border-l-4 border-l-purple-500">
+                                <CardHeader className="pb-3">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="font-mono text-xs">
+                                      {wIdx + 1}
+                                    </Badge>
+                                    <span className="text-xl">
+                                      {workout.session_type === 'warmup' && '🔥'}
+                                      {workout.session_type === 'main' && '💪'}
+                                      {workout.session_type === 'cooldown' && '🧘'}
+                                      {!workout.session_type && '📋'}
+                                    </span>
+                                    <CardTitle className="text-base">{workout.titre}</CardTitle>
+                                  </div>
+                                  {workout.duree_estimee && (
+                                    <Badge variant="secondary" className="mt-1 w-fit">
+                                      {workout.duree_estimee} min
+                                    </Badge>
+                                  )}
+                                </CardHeader>
+                                <CardContent>
+                                  <p className="text-xs text-muted-foreground mb-2">
+                                    {workoutExercises.length} exercice{workoutExercises.length > 1 ? 's' : ''}
+                                  </p>
+                                  <ul className="space-y-1">
+                                    {workoutExercises.slice(0, 3).map((we, idx) => (
+                                      <li key={we.id} className="text-xs flex items-start gap-1">
+                                        <span className="text-muted-foreground">•</span>
+                                        <span className="flex-1">{we.exercise.libelle}</span>
+                                      </li>
+                                    ))}
+                                    {workoutExercises.length > 3 && (
+                                      <li className="text-xs text-muted-foreground italic">
+                                        ... et {workoutExercises.length - 3} autres
+                                      </li>
+                                    )}
+                                  </ul>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm font-medium mb-3">
+                            Voici les exercices de ta séance :
+                          </p>
+                          <ul className="space-y-2">
+                            {exercises.slice(0, 5).map((we, index) => (
+                              <li key={we.id} className="text-sm flex items-start gap-2">
+                                <Badge variant="outline" className="font-mono text-xs mt-0.5">
+                                  {index + 1}
+                                </Badge>
+                                <span className="flex-1">{we.exercise.libelle}</span>
+                              </li>
+                            ))}
+                            {exercises.length > 5 && (
+                              <li className="text-xs text-muted-foreground italic">
+                                ... et {exercises.length - 5} autres exercices
+                              </li>
+                            )}
+                          </ul>
+                          {isCircuitWorkout && (
+                            <p className="text-xs text-muted-foreground mt-3 italic">
+                              Circuit de {currentWorkout.circuit_rounds} tours
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
-                  )}
 
                   <div className="text-center">
                     <Button onClick={startSession} size="lg" className="bg-gradient-primary">
