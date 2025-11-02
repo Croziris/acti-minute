@@ -1,3 +1,5 @@
+// REMPLACE TOUT LE CONTENU DE src/hooks/useSessionData.ts PAR :
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,11 +33,14 @@ export interface Session {
       temps_seconds?: number;
       charge_cible?: number;
       tempo?: string;
-      couleur?: string;
+      couleur_elastique?: string;
       tips?: string;
       variations?: string;
       order_index?: number;
       circuit_number?: number;
+      section?: string;
+      rpe_cible?: number;
+      temps_repos_seconds?: number;
       exercise: {
         id: string;
         libelle: string;
@@ -68,11 +73,14 @@ export interface Session {
         temps_seconds?: number;
         charge_cible?: number;
         tempo?: string;
-        couleur?: string;
+        couleur_elastique?: string;
         tips?: string;
         variations?: string;
         order_index?: number;
         circuit_number?: number;
+        section?: string;
+        rpe_cible?: number;
+        temps_repos_seconds?: number;
         exercise: {
           id: string;
           libelle: string;
@@ -98,6 +106,10 @@ export const useSessionData = (sessionId?: string) => {
 
     const fetchSession = async () => {
       try {
+        setLoading(true);
+        setError(null);
+
+        // 1. Charger la session de base
         const { data: sessionData, error: sessionError } = await supabase
           .from('session')
           .select('*')
@@ -107,7 +119,9 @@ export const useSessionData = (sessionId?: string) => {
 
         if (sessionError) throw sessionError;
 
-        // Charger les workouts via session_workout (sessions combinées)
+        console.log('📦 Session chargée:', sessionData);
+
+        // 2. Essayer de charger via session_workout (sessions combinées)
         const { data: sessionWorkouts, error: sessionWorkoutsError } = await supabase
           .from('session_workout')
           .select(`
@@ -154,17 +168,15 @@ export const useSessionData = (sessionId?: string) => {
           .eq('session_id', sessionId)
           .order('order_index');
 
-        console.log('📥 Résultat requête session_workout:', sessionWorkouts);
-
         if (sessionWorkoutsError) {
-          console.error('❌ Erreur:', sessionWorkoutsError);
-          throw sessionWorkoutsError;
+          console.error('❌ Erreur session_workout:', sessionWorkoutsError);
         }
 
+        // 3. Déterminer le type de session et formater les données
         if (sessionWorkouts && sessionWorkouts.length > 0) {
-          console.log(`✅ ${sessionWorkouts.length} workout(s) chargé(s)`);
+          // SESSION COMBINÉE
+          console.log(`✅ Session combinée: ${sessionWorkouts.length} workout(s)`);
           
-          // Vérifier que chaque workout a ses exercices
           sessionWorkouts.forEach((sw, idx) => {
             console.log(`  Workout ${idx + 1}:`, {
               id: sw.workout?.id,
@@ -172,7 +184,7 @@ export const useSessionData = (sessionId?: string) => {
               nb_exercices: sw.workout?.workout_exercise?.length || 0
             });
           });
-          
+
           setSession({
             ...sessionData,
             statut: sessionData.statut as Session['statut'],
@@ -185,12 +197,10 @@ export const useSessionData = (sessionId?: string) => {
               }
             }))
           });
-          
-          setLoading(false);
-          return;
         } else if (sessionData.workout_id) {
-          // Fallback: ancien système avec workout_id direct
-          console.log('📋 Session simple (legacy) détectée - workout_id:', sessionData.workout_id);
+          // SESSION SIMPLE (LEGACY)
+          console.log('📋 Session simple - workout_id:', sessionData.workout_id);
+          
           const { data: workoutData, error: workoutError } = await supabase
             .from('workout')
             .select(`
@@ -229,7 +239,12 @@ export const useSessionData = (sessionId?: string) => {
 
           if (workoutExerciseError) throw workoutExerciseError;
 
-          const combinedData: Session = {
+          console.log('✅ Session simple chargée:', {
+            workout_titre: workoutData.titre,
+            nb_exercices: workoutExerciseData?.length || 0
+          });
+
+          setSession({
             ...sessionData,
             statut: sessionData.statut as Session['statut'],
             workout: {
@@ -238,21 +253,17 @@ export const useSessionData = (sessionId?: string) => {
               circuit_configs: workoutData.circuit_configs as Array<{ rounds: number; rest: number }> | undefined,
               workout_exercise: workoutExerciseData || []
             }
-          };
-
-          console.log('✅ Session simple chargée:', {
-            workout_titre: workoutData.titre,
-            nb_exercices: workoutExerciseData?.length || 0
           });
-
-          setSession(combinedData);
         } else {
+          // SESSION VIDE
+          console.warn('⚠️ Session sans workout');
           setSession({
             ...sessionData,
             statut: sessionData.statut as Session['statut']
           });
         }
       } catch (err) {
+        console.error('❌ Erreur fetchSession:', err);
         setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
       } finally {
         setLoading(false);
@@ -262,5 +273,5 @@ export const useSessionData = (sessionId?: string) => {
     fetchSession();
   }, [sessionId, user]);
 
-  return { session, loading, error, refetch: () => setLoading(true) };
+  return { session, loading, error };
 };
