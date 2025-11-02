@@ -12,6 +12,9 @@ interface Exercise {
   reps?: number | null;
   temps_seconds?: number | null;
   charge_cible?: number | null;
+  tempo?: string | null;
+  temps_repos_seconds?: number | null;
+  rpe_cible?: number | null;
   couleur_elastique?: string | null;
   tips?: string | null;
   variations?: string | null;
@@ -116,54 +119,112 @@ export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({
 
         {/* Exercise Prescription */}
         <div className="p-4 bg-muted/30 rounded-lg space-y-3">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center">
-              <div className="font-semibold text-lg">
-                {we.reps || we.temps_seconds}
+          {/* Affichage dynamique de TOUTES les variables renseignées */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Répétitions cibles */}
+            {we.reps && (
+              <div className="text-center p-2 bg-background rounded border border-border">
+                <div className="font-semibold text-lg">{we.reps}</div>
+                <div className="text-xs text-muted-foreground">Répétitions cibles</div>
               </div>
-              <div className="text-xs text-muted-foreground">
-                {we.reps ? 'Répétitions cibles' : 'Secondes'}
+            )}
+            
+            {/* Temps (secondes) */}
+            {we.temps_seconds && (
+              <div className="text-center p-2 bg-background rounded border border-border">
+                <div className="font-semibold text-lg">{we.temps_seconds}s</div>
+                <div className="text-xs text-muted-foreground">Durée</div>
               </div>
-            </div>
+            )}
+            
+            {/* Charge cible */}
             {we.charge_cible && (
-              <div className="text-center">
+              <div className="text-center p-2 bg-background rounded border border-border">
                 <div className="font-semibold text-lg">{we.charge_cible}kg</div>
                 <div className="text-xs text-muted-foreground">Charge cible</div>
+              </div>
+            )}
+            
+            {/* Tempo */}
+            {we.tempo && (
+              <div className="text-center p-2 bg-background rounded border border-border">
+                <div className="font-semibold text-lg">{we.tempo}</div>
+                <div className="text-xs text-muted-foreground">Tempo</div>
+              </div>
+            )}
+            
+            {/* Temps de repos */}
+            {we.temps_repos_seconds && (
+              <div className="text-center p-2 bg-background rounded border border-border">
+                <div className="font-semibold text-lg">{we.temps_repos_seconds}s</div>
+                <div className="text-xs text-muted-foreground">Repos</div>
+              </div>
+            )}
+            
+            {/* RPE cible */}
+            {we.rpe_cible && (
+              <div className="text-center p-2 bg-background rounded border border-border">
+                <div className="font-semibold text-lg">{we.rpe_cible}/10</div>
+                <div className="text-xs text-muted-foreground">RPE cible</div>
+              </div>
+            )}
+            
+            {/* Couleur élastique */}
+            {we.couleur_elastique && (
+              <div className="text-center p-2 bg-background rounded border border-border">
+                <Badge variant="outline" className="text-sm">
+                  {we.couleur_elastique}
+                </Badge>
+                <div className="text-xs text-muted-foreground mt-1">Élastique</div>
               </div>
             )}
           </div>
 
           {/* Logging Controls */}
           <div className="pt-3 border-t border-border space-y-3">
-            <div className="text-sm font-medium text-center">Tour {roundNumber}</div>
+            <div className="text-sm font-medium text-center text-primary">
+              📊 Tour {roundNumber}
+            </div>
             
-            {we.reps && (
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">Répétitions réalisées</label>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setRepsCompleted(Math.max(0, repsCompleted - 1))}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <Input
-                    type="number"
-                    value={repsCompleted}
-                    onChange={(e) => setRepsCompleted(parseInt(e.target.value) || 0)}
-                    className="text-center"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setRepsCompleted(repsCompleted + 1)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
+            {/* ✅ COMPTEUR DE RÉPÉTITIONS - TOUJOURS AFFICHÉ */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">
+                Répétitions réalisées
+                {we.reps && (
+                  <span className="ml-1 text-primary">(cible: {we.reps})</span>
+                )}
+              </label>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRepsCompleted(Math.max(0, repsCompleted - 1))}
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <Input
+                  type="number"
+                  value={repsCompleted}
+                  onChange={(e) => setRepsCompleted(parseInt(e.target.value) || 0)}
+                  className="text-center font-semibold"
+                  placeholder="0"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRepsCompleted(repsCompleted + 1)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
-            )}
+              
+              {/* Info contextuelle selon le type d'exercice */}
+              {we.temps_seconds && !we.reps && (
+                <p className="text-xs text-muted-foreground italic text-center">
+                  💡 Note tes répétitions effectuées pendant les {we.temps_seconds}s
+                </p>
+              )}
+            </div>
 
             {we.charge_cible && (
               <div className="space-y-2">
@@ -180,13 +241,6 @@ export const CircuitExerciseCard: React.FC<CircuitExerciseCardProps> = ({
 
           </div>
         </div>
-
-        {/* Couleur élastique */}
-        {we.couleur_elastique && (
-          <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
-            <Badge variant="outline">Élastique {we.couleur_elastique}</Badge>
-          </div>
-        )}
 
         {/* Tips & Variations */}
         {(we.tips || we.variations) && (
