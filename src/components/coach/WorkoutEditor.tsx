@@ -328,7 +328,10 @@ export const WorkoutEditor: React.FC<Props> = ({
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto">
-            <ExerciseLibrary onSelectExercise={handleAddExercise} />
+            <ExerciseLibrary 
+              onSelectExercise={handleAddExercise} 
+              selectionMode={true}
+            />
           </div>
         </DialogContent>
       </Dialog>
