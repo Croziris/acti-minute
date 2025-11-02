@@ -56,6 +56,25 @@ const ClientSession = () => {
     }
   }, [session]);
 
+  // Détecter automatiquement la fin de séance CLASSIQUE
+  useEffect(() => {
+    if (!session || !session.workout) return;
+    
+    const exercises = session.workout?.workout_exercise || [];
+    const isCircuitWorkout = session.workout?.workout_type === "circuit";
+    
+    if (!isCircuitWorkout && 
+        sessionStarted && 
+        !showValidationScreen && 
+        !showFinalFeedback &&
+        completedExercises.size === exercises.length && 
+        exercises.length > 0) {
+      
+      console.log("🎯 Détection fin de séance classique - tous les exercices complétés");
+      setShowFinalFeedback(true);
+    }
+  }, [session, completedExercises, sessionStarted, showValidationScreen, showFinalFeedback]);
+
   const startSession = async () => {
     if (!session || !user) return;
 
@@ -276,20 +295,6 @@ const ClientSession = () => {
   const canComplete = isCircuitWorkout 
     ? completedExercises.size === exercises.length // Tous les exercices marqués comme complétés par le circuit
     : completionRate >= 100 || completedExercises.size === exercises.length;
-
-  // Détecter automatiquement la fin de séance CLASSIQUE
-  useEffect(() => {
-    if (!isCircuitWorkout && 
-        sessionStarted && 
-        !showValidationScreen && 
-        !showFinalFeedback &&
-        completedExercises.size === exercises.length && 
-        exercises.length > 0) {
-      
-      console.log("🎯 Détection fin de séance classique - tous les exercices complétés");
-      setShowFinalFeedback(true);
-    }
-  }, [completedExercises, exercises.length, isCircuitWorkout, sessionStarted, showValidationScreen, showFinalFeedback]);
 
   return (
     <ClientLayout>
