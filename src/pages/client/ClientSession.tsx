@@ -34,6 +34,21 @@ const ClientSession = () => {
   const [warmupCompleted, setWarmupCompleted] = useState(false);
   const [mainCompleted, setMainCompleted] = useState(false);
 
+  // Variables dérivées de session
+  const exercises = session?.workout?.workout_exercise || [];
+  const isCircuitWorkout = session?.workout?.workout_type === "circuit";
+  
+  // Grouper les exercices par section
+  const exercisesBySection = React.useMemo(() => {
+    if (!exercises || exercises.length === 0) return { warmup: [], main: [], cooldown: [] };
+    
+    return {
+      warmup: exercises.filter(ex => ex.section === 'warmup').sort((a, b) => (a.order_index || 0) - (b.order_index || 0)),
+      main: exercises.filter(ex => ex.section === 'main').sort((a, b) => (a.order_index || 0) - (b.order_index || 0)),
+      cooldown: exercises.filter(ex => ex.section === 'cooldown').sort((a, b) => (a.order_index || 0) - (b.order_index || 0)),
+    };
+  }, [exercises]);
+
   useEffect(() => {
     if (session?.statut === "ongoing") {
       setSessionStarted(true);
