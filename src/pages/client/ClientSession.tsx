@@ -38,27 +38,32 @@ const ClientSession = () => {
 
   // Récupérer les workouts dans l'ordre avec vérification de sécurité
   const orderedWorkouts = React.useMemo(() => {
+    console.log('🔄 Calcul orderedWorkouts:', {
+      session: !!session,
+      isCombined: isCombinedSession,
+      session_workout_length: session?.session_workout?.length,
+      workout: !!session?.workout
+    });
+    
     if (!session) {
-      console.log('⚠️ Session null');
+      console.log('❌ Pas de session');
       return [];
     }
     
     if (isCombinedSession) {
-      // Session combinée : trier par order_index et extraire les workouts
       const workouts = session.session_workout
-        .filter(sw => sw?.workout !== null && sw?.workout !== undefined) // ✅ Double vérification
+        .filter(sw => sw?.workout !== null && sw?.workout !== undefined)
         .sort((a, b) => a.order_index - b.order_index)
         .map(sw => sw.workout);
       
-      console.log('🔹 Workouts combinés filtrés:', workouts.length, '/', session.session_workout.length);
+      console.log('✅ Workouts combinés:', workouts.length, workouts);
       return workouts;
     } else if (session.workout) {
-      // Session simple : 1 seul workout
-      console.log('🔹 Workout simple détecté');
+      console.log('✅ Workout simple:', session.workout);
       return [session.workout];
     }
     
-    console.log('⚠️ Aucun workout trouvé');
+    console.log('⚠️ Aucun workout');
     return [];
   }, [session, isCombinedSession]);
 
@@ -83,6 +88,12 @@ const ClientSession = () => {
       } : null
     });
   }, [session, orderedWorkouts, currentWorkoutIndex, currentWorkout, exercises, isCombinedSession]);
+
+  console.log('📊 État final:', {
+    nb_workouts: orderedWorkouts.length,
+    currentIndex: currentWorkoutIndex,
+    currentWorkout: currentWorkout
+  });
 
   useEffect(() => {
     if (session?.statut === "ongoing") {
@@ -718,7 +729,7 @@ const ClientSession = () => {
                       </p>
                     )}
                     <p className="text-muted-foreground mb-4">
-                      {currentWorkout.duree_estimee && `Durée estimée: ${orderedWorkouts.filter(w => w).reduce((sum, w) => sum + (w.duree_estimee || 0), 0)} minutes`}
+                      {currentWorkout?.duree_estimee && `Durée estimée: ${orderedWorkouts.filter(w => w).reduce((sum, w) => sum + (w?.duree_estimee || 0), 0)} minutes`}
                     </p>
                   </div>
 
@@ -745,9 +756,9 @@ const ClientSession = () => {
                                         {workout?.session_type === 'cooldown' && '🧘'}
                                         {!workout?.session_type && '📋'}
                                       </span>
-                                      <CardTitle className="text-base">{workout?.titre || 'Séance sans titre'}</CardTitle>
+                                       <CardTitle className="text-base">{workout?.titre || 'Séance sans titre'}</CardTitle>
                                   </div>
-                                  {workout.duree_estimee && (
+                                  {workout?.duree_estimee && (
                                     <Badge variant="secondary" className="mt-1 w-fit">
                                       {workout.duree_estimee} min
                                     </Badge>
@@ -797,7 +808,7 @@ const ClientSession = () => {
                           </ul>
                           {isCircuitWorkout && (
                             <p className="text-xs text-muted-foreground mt-3 italic">
-                              Circuit de {currentWorkout.circuit_rounds} tours
+                              Circuit de {currentWorkout?.circuit_rounds} tours
                             </p>
                           )}
                         </>
@@ -865,7 +876,7 @@ const ClientSession = () => {
                   <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h2 className="text-xl font-semibold mb-2">Workout vide</h2>
                   <p className="text-muted-foreground mb-4">
-                    Le workout "{currentWorkout.titre}" ne contient pas d'exercices.
+                    Le workout "{currentWorkout?.titre}" ne contient pas d'exercices.
                   </p>
                   {isCombinedSession && currentWorkoutIndex < orderedWorkouts.length - 1 ? (
                     <Button 
@@ -908,13 +919,13 @@ const ClientSession = () => {
                         Séance {currentWorkoutIndex + 1}/{orderedWorkouts.length}
                       </Badge>
                       
-                      <h2 className="text-3xl font-bold mb-2">{currentWorkout.titre}</h2>
+                      <h2 className="text-3xl font-bold mb-2">{currentWorkout?.titre}</h2>
                       
-                      {currentWorkout.description && (
+                      {currentWorkout?.description && (
                         <p className="text-muted-foreground">{currentWorkout.description}</p>
                       )}
                       
-                      {currentWorkout.duree_estimee && (
+                      {currentWorkout?.duree_estimee && (
                         <Badge variant="secondary" className="mt-3">
                           {currentWorkout.duree_estimee} minutes
                         </Badge>
@@ -927,11 +938,11 @@ const ClientSession = () => {
                 {isCircuitWorkout ? (
                   <CircuitTrainingView
                     exercises={exercises}
-                    circuitRounds={currentWorkout.circuit_rounds || 3}
-                    restTime={currentWorkout.temps_repos_tours_seconds || 60}
+                    circuitRounds={currentWorkout?.circuit_rounds || 3}
+                    restTime={currentWorkout?.temps_repos_tours_seconds || 60}
                     sessionId={session.id}
-                    nombreCircuits={currentWorkout.nombre_circuits || 1}
-                    circuitConfigs={currentWorkout.circuit_configs || undefined}
+                    nombreCircuits={currentWorkout?.nombre_circuits || 1}
+                    circuitConfigs={currentWorkout?.circuit_configs || undefined}
                     onRoundComplete={handleRoundComplete}
                     onAllComplete={handleCircuitComplete}
                   />
@@ -964,8 +975,8 @@ const ClientSession = () => {
                           >
                             <CheckCircle className="h-6 w-6 mr-3" />
                             {currentWorkoutIndex < orderedWorkouts.length - 1 
-                              ? `Terminer "${currentWorkout.titre}" et continuer`
-                              : `Terminer "${currentWorkout.titre}"`
+                              ? `Terminer "${currentWorkout?.titre}" et continuer`
+                              : `Terminer "${currentWorkout?.titre}"`
                             }
                           </Button>
                         </CardContent>
