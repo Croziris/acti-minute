@@ -36,7 +36,7 @@ export const CombinedWorkoutsBuilder: React.FC<CombinedWorkoutsBuilderProps> = (
     const { data, error } = await supabase
       .from('workout')
       .select('id, titre, description, session_type, workout_type, duree_estimee')
-      .eq('is_template', false)
+      .eq('is_template', true)
       .order('titre');
     
     if (error) {
