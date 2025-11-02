@@ -66,7 +66,7 @@ export const AssignWorkoutDialog: React.FC<Props> = ({
       const { data: workoutsData, error } = await supabase
         .from('workout')
         .select('*')
-        .eq('is_template', false)
+        .eq('is_template', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
