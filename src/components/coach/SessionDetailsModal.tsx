@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, CheckCircle2, XCircle, Dumbbell, Star } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, Dumbbell, Star, MessageSquare, AlertCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -24,7 +24,11 @@ interface SetLog {
 }
 
 interface ExerciseFeedback {
-  exercise_id: string;
+  id: string;
+  exercise_id: string | null;
+  circuit_number: number | null;
+  feedback_type: string;
+  rpe: number | null;
   plaisir_0_10: number | null;
   difficulte_0_10: number | null;
 }
@@ -62,6 +66,8 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
   const [session, setSession] = useState<SessionDetails | null>(null);
   const [setLogs, setSetLogs] = useState<SetLog[]>([]);
   const [feedbacks, setFeedbacks] = useState<ExerciseFeedback[]>([]);
+  const [circuitFeedbacks, setCircuitFeedbacks] = useState<ExerciseFeedback[]>([]);
+  const [finalFeedback, setFinalFeedback] = useState<ExerciseFeedback | null>(null);
 
   useEffect(() => {
     if (open && sessionId) {
@@ -122,9 +128,16 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
 
       if (feedbacksError) throw feedbacksError;
 
+      // Séparer les différents types de feedbacks
+      const exerciseFeedbacks = (feedbacksData || []).filter(f => f.exercise_id !== null);
+      const circuitFbs = (feedbacksData || []).filter(f => f.feedback_type === 'circuit' && f.exercise_id === null);
+      const finalFb = (feedbacksData || []).find(f => f.feedback_type === 'session' && f.exercise_id === null);
+
       setSession(sessionData as any);
       setSetLogs(logsData || []);
-      setFeedbacks(feedbacksData || []);
+      setFeedbacks(exerciseFeedbacks);
+      setCircuitFeedbacks(circuitFbs);
+      setFinalFeedback(finalFb || null);
     } catch (error) {
       console.error('Error fetching session details:', error);
     } finally {
@@ -175,6 +188,7 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
   const statusInfo = getStatusInfo(session.statut);
   const StatusIcon = statusInfo.icon;
   const duration = calculateSessionDuration();
+  const isCircuitWorkout = session.workout.workout_type === 'circuit';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -196,15 +210,149 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
         </DialogHeader>
 
         <ScrollArea className="max-h-[calc(90vh-150px)] pr-4">
-          {session.commentaire_fin && (
-            <Card className="mb-4 border-primary/20">
-              <CardHeader>
-                <CardTitle className="text-base">Commentaire de fin de séance</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm italic text-muted-foreground">"{session.commentaire_fin}"</p>
-              </CardContent>
-            </Card>
+          {/* Section Feedbacks & Ressentis */}
+          {session.statut === 'done' && (circuitFeedbacks.length > 0 || finalFeedback || feedbacks.length > 0 || session.commentaire_fin) && (
+            <div className="space-y-4 mb-6">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold">Feedbacks & Ressentis du client</h3>
+              </div>
+
+              {/* Feedbacks par circuit */}
+              {isCircuitWorkout && circuitFeedbacks.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">📊 Feedbacks par circuit</h4>
+                  {circuitFeedbacks
+                    .sort((a, b) => (a.circuit_number || 0) - (b.circuit_number || 0))
+                    .map((feedback) => (
+                      <Card key={feedback.id} className="border-l-4 border-l-blue-500">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Badge variant="outline">Circuit {feedback.circuit_number}</Badge>
+                            Ressentis
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-3 gap-3">
+                            {feedback.rpe !== null && (
+                              <div className="text-center p-2 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                                <div className="text-xl font-bold text-orange-600">{feedback.rpe}/10</div>
+                                <div className="text-xs text-muted-foreground mt-1">RPE</div>
+                              </div>
+                            )}
+                            {feedback.difficulte_0_10 !== null && (
+                              <div className="text-center p-2 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                                <div className="text-xl font-bold text-red-600">{feedback.difficulte_0_10}/10</div>
+                                <div className="text-xs text-muted-foreground mt-1">Difficulté</div>
+                              </div>
+                            )}
+                            {feedback.plaisir_0_10 !== null && (
+                              <div className="text-center p-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                                <div className="text-xl font-bold text-green-600">{feedback.plaisir_0_10}/10</div>
+                                <div className="text-xs text-muted-foreground mt-1">Plaisir</div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              )}
+
+              {/* Feedbacks par exercice (séances classiques) */}
+              {!isCircuitWorkout && feedbacks.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">📋 Feedbacks par exercice</h4>
+                  {feedbacks.map((feedback) => {
+                    const exercise = session.workout.workout_exercises.find(
+                      we => we.exercise_id === feedback.exercise_id
+                    );
+                    return (
+                      <Card key={feedback.id} className="border-l-4 border-l-purple-500">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm">
+                            {exercise?.exercise.libelle || 'Exercice'}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-3 gap-3">
+                            {feedback.difficulte_0_10 !== null && (
+                              <div className="text-center p-2 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                                <div className="text-xl font-bold text-red-600">{feedback.difficulte_0_10}/10</div>
+                                <div className="text-xs text-muted-foreground mt-1">Difficulté</div>
+                              </div>
+                            )}
+                            {feedback.plaisir_0_10 !== null && (
+                              <div className="text-center p-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                                <div className="text-xl font-bold text-green-600">{feedback.plaisir_0_10}/10</div>
+                                <div className="text-xs text-muted-foreground mt-1">Plaisir</div>
+                              </div>
+                            )}
+                            {feedback.rpe !== null && (
+                              <div className="text-center p-2 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                                <div className="text-xl font-bold text-orange-600">{feedback.rpe}/10</div>
+                                <div className="text-xs text-muted-foreground mt-1">RPE</div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Feedback final de séance */}
+              {finalFeedback && (
+                <Card className="border-2 border-primary">
+                  <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Star className="h-4 w-4 text-primary" />
+                      Feedback global de la séance
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <div className="grid grid-cols-3 gap-3">
+                      {finalFeedback.rpe !== null && (
+                        <div className="text-center p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border-2 border-orange-200 dark:border-orange-800">
+                          <div className="text-2xl font-bold text-orange-600">{finalFeedback.rpe}/10</div>
+                          <div className="text-xs font-medium text-muted-foreground mt-2">RPE moyen</div>
+                        </div>
+                      )}
+                      {finalFeedback.difficulte_0_10 !== null && (
+                        <div className="text-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border-2 border-red-200 dark:border-red-800">
+                          <div className="text-2xl font-bold text-red-600">{finalFeedback.difficulte_0_10}/10</div>
+                          <div className="text-xs font-medium text-muted-foreground mt-2">Difficulté globale</div>
+                        </div>
+                      )}
+                      {finalFeedback.plaisir_0_10 !== null && (
+                        <div className="text-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border-2 border-green-200 dark:border-green-800">
+                          <div className="text-2xl font-bold text-green-600">{finalFeedback.plaisir_0_10}/10</div>
+                          <div className="text-xs font-medium text-muted-foreground mt-2">Plaisir global</div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Commentaire final */}
+              {session.commentaire_fin && (
+                <Card className="border-l-4 border-l-primary">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Commentaire du client
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <p className="text-sm whitespace-pre-wrap">{session.commentaire_fin}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           )}
           
           {session.statut === 'planned' ? (
@@ -254,20 +402,8 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
                   return (
                     <Card key={we.exercise_id}>
                       <CardHeader>
-                        <CardTitle className="text-lg flex items-center justify-between">
-                          <span>
-                            {idx + 1}. {we.exercise.libelle}
-                          </span>
-                          {feedback && (
-                            <div className="flex items-center gap-3 text-sm font-normal">
-                              <span className="flex items-center gap-1 text-muted-foreground">
-                                😊 {feedback.plaisir_0_10}/10
-                              </span>
-                              <span className="flex items-center gap-1 text-muted-foreground">
-                                💪 {feedback.difficulte_0_10}/10
-                              </span>
-                            </div>
-                          )}
+                        <CardTitle className="text-lg">
+                          {idx + 1}. {we.exercise.libelle}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
