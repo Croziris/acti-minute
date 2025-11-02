@@ -22,6 +22,8 @@ const ClientSession = () => {
   const { user } = useAuth();
   const { session, loading, error } = useSessionData(sessionId);
   const { addOfflineData, isOnline } = useOfflineSync();
+  const [currentWorkoutIndex, setCurrentWorkoutIndex] = useState(0);
+  const [completedWorkouts, setCompletedWorkouts] = useState<Set<number>>(new Set());
   const [sessionStarted, setSessionStarted] = useState(false);
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set());
   const [sessionCompleted, setSessionCompleted] = useState(false);
@@ -31,9 +33,16 @@ const ClientSession = () => {
   const [showContactScreen, setShowContactScreen] = useState(false);
   const [showFinalFeedback, setShowFinalFeedback] = useState(false);
 
-  // Variables dérivées de session
-  const exercises = session?.workout?.workout_exercise || [];
-  const isCircuitWorkout = session?.workout?.workout_type === "circuit";
+  // Variables dérivées - supporter sessions combinées et simples
+  const orderedWorkouts = session?.session_workout?.length 
+    ? session.session_workout.sort((a, b) => a.order_index - b.order_index).map(sw => sw.workout)
+    : session?.workout 
+      ? [session.workout]
+      : [];
+  
+  const currentWorkout = orderedWorkouts[currentWorkoutIndex];
+  const exercises = currentWorkout?.workout_exercise || [];
+  const isCircuitWorkout = currentWorkout?.workout_type === "circuit";
 
   useEffect(() => {
     if (session?.statut === "ongoing") {
@@ -282,12 +291,35 @@ const ClientSession = () => {
   };
 
   const handleCircuitComplete = () => {
-    console.log("🎉 handleCircuitComplete appelé dans ClientSession");
-    // Marquer tous les exercices comme complétés
+    console.log("🎉 Circuit workout terminé");
+    completeCurrentWorkout();
+  };
+
+  const completeCurrentWorkout = () => {
+    console.log(`✅ Workout ${currentWorkoutIndex + 1} terminé`);
+    
+    setCompletedWorkouts(prev => new Set(prev).add(currentWorkoutIndex));
+    setCompletedExercises(new Set()); // Reset pour le prochain workout
+    
+    if (currentWorkoutIndex < orderedWorkouts.length - 1) {
+      // Il y a encore des workouts à faire
+      setCurrentWorkoutIndex(prev => prev + 1);
+      
+      const nextWorkout = orderedWorkouts[currentWorkoutIndex + 1];
+      toast({
+        title: "Séance suivante",
+        description: `Passons à : ${nextWorkout.titre} 💪`,
+      });
+    } else {
+      // Tous les workouts sont terminés
+      handleAllWorkoutsComplete();
+    }
+  };
+
+  const handleAllWorkoutsComplete = () => {
+    console.log("🎉 Tous les workouts terminés");
     const allExerciseIds = exercises.map((e) => e.exercise.id);
     setCompletedExercises(new Set(allExerciseIds));
-    
-    // Afficher le modal de feedback final
     setShowFinalFeedback(true);
   };
 
@@ -528,15 +560,62 @@ const ClientSession = () => {
                     {session.statut === "done" ? "Terminée" : session.statut === "ongoing" ? "En cours" : "À faire"}
                   </Badge>
                 </div>
-                <h1 className="text-2xl font-bold">{session.workout?.titre || `Séance ${session.index_num}`}</h1>
-                {session.workout?.description && (
-                  <p className="text-muted-foreground mt-1">{session.workout.description}</p>
+                <h1 className="text-2xl font-bold">
+                  {orderedWorkouts.length > 1 
+                    ? `Session combinée (${orderedWorkouts.length} séances)`
+                    : currentWorkout?.titre || `Séance ${session.index_num}`
+                  }
+                </h1>
+                {orderedWorkouts.length === 1 && currentWorkout?.description && (
+                  <p className="text-muted-foreground mt-1">{currentWorkout.description}</p>
                 )}
               </div>
             </div>
 
+            {/* Aperçu des workouts combinés */}
+            {orderedWorkouts.length > 1 && sessionStarted && (
+              <Card className="bg-gradient-to-r from-primary/10 to-primary/5">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-3">
+                    📋 Session combinée ({orderedWorkouts.length} séances)
+                  </h3>
+                  <div className="space-y-2">
+                    {orderedWorkouts.map((workout, index) => (
+                      <div 
+                        key={`overview-${index}`}
+                        className={`flex items-center gap-3 p-2 rounded ${
+                          index === currentWorkoutIndex 
+                            ? 'bg-primary/20 border border-primary' 
+                            : index < currentWorkoutIndex 
+                              ? 'opacity-50' 
+                              : 'opacity-75'
+                        }`}
+                      >
+                        <Badge variant="outline" className="font-mono">
+                          {index + 1}
+                        </Badge>
+                        <span className="text-xl">
+                          {workout.session_type === 'warmup' && '🔥'}
+                          {workout.session_type === 'main' && '💪'}
+                          {workout.session_type === 'cooldown' && '🧘'}
+                          {!workout.session_type && '📋'}
+                        </span>
+                        <span className="font-medium flex-1">{workout.titre}</span>
+                        {completedWorkouts.has(index) && (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        )}
+                        {index === currentWorkoutIndex && (
+                          <Badge variant="default">En cours</Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Progress - Affichage différent pour circuits */}
-            {exercises.length > 0 && !isCircuitWorkout && (
+            {exercises.length > 0 && !isCircuitWorkout && sessionStarted && (
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -556,23 +635,33 @@ const ClientSession = () => {
             )}
 
             {/* Start Session Button */}
-            {!sessionStarted && session.statut === "planned" && (
+            {!sessionStarted && session.statut === "planned" && currentWorkout && (
               <Card>
                 <CardContent className="p-6">
                   <div className="text-center mb-6">
                     <Clock className="h-12 w-12 mx-auto mb-4 text-primary" />
                     <h3 className="text-lg font-semibold mb-2">Prêt à commencer ?</h3>
+                    {orderedWorkouts.length > 1 && (
+                      <p className="text-muted-foreground mb-2">
+                        Session combinée de {orderedWorkouts.length} séances
+                      </p>
+                    )}
                     <p className="text-muted-foreground mb-4">
-                      {session.workout?.duree_estimee && `Durée estimée: ${session.workout.duree_estimee} minutes`}
+                      {currentWorkout.duree_estimee && `Durée estimée: ${orderedWorkouts.reduce((sum, w) => sum + (w.duree_estimee || 0), 0)} minutes`}
                     </p>
                   </div>
 
                   {/* Exercise Preview */}
                   {exercises.length > 0 && (
                     <div className="mb-6 p-4 bg-muted/30 rounded-lg">
-                      <p className="text-sm font-medium mb-3">Voici les exercices de ta séance d'aujourd'hui :</p>
+                      <p className="text-sm font-medium mb-3">
+                        {orderedWorkouts.length > 1 
+                          ? `Première séance : ${currentWorkout.titre}`
+                          : 'Voici les exercices de ta séance :'
+                        }
+                      </p>
                       <ul className="space-y-2">
-                        {exercises.map((we, index) => (
+                        {exercises.slice(0, 5).map((we, index) => (
                           <li key={we.id} className="text-sm flex items-start gap-2">
                             <Badge variant="outline" className="font-mono text-xs mt-0.5">
                               {index + 1}
@@ -580,10 +669,15 @@ const ClientSession = () => {
                             <span className="flex-1">{we.exercise.libelle}</span>
                           </li>
                         ))}
+                        {exercises.length > 5 && (
+                          <li className="text-xs text-muted-foreground italic">
+                            ... et {exercises.length - 5} autres exercices
+                          </li>
+                        )}
                       </ul>
                       {isCircuitWorkout && (
                         <p className="text-xs text-muted-foreground mt-3 italic">
-                          Circuit de {session.workout.circuit_rounds} tours
+                          Circuit de {currentWorkout.circuit_rounds} tours
                         </p>
                       )}
                     </div>
@@ -599,17 +693,54 @@ const ClientSession = () => {
               </Card>
             )}
 
-            {/* Exercises */}
-            {sessionStarted && exercises.length > 0 && (
+            {/* Affichage du workout actuel */}
+            {sessionStarted && currentWorkout && exercises.length > 0 && (
               <div className="space-y-4">
+                {/* Header du workout actuel */}
+                {orderedWorkouts.length > 1 && (
+                  <Card className={`border-2 ${
+                    currentWorkout.session_type === 'warmup' 
+                      ? 'bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/20 border-orange-500'
+                      : currentWorkout.session_type === 'cooldown'
+                        ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 border-green-500'
+                        : 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 border-blue-500'
+                  }`}>
+                    <CardContent className="p-8 text-center">
+                      <div className="text-5xl mb-3">
+                        {currentWorkout.session_type === 'warmup' && '🔥'}
+                        {currentWorkout.session_type === 'main' && '💪'}
+                        {currentWorkout.session_type === 'cooldown' && '🧘'}
+                        {!currentWorkout.session_type && '📋'}
+                      </div>
+                      
+                      <Badge variant="outline" className="mb-2">
+                        Séance {currentWorkoutIndex + 1}/{orderedWorkouts.length}
+                      </Badge>
+                      
+                      <h2 className="text-3xl font-bold mb-2">{currentWorkout.titre}</h2>
+                      
+                      {currentWorkout.description && (
+                        <p className="text-muted-foreground">{currentWorkout.description}</p>
+                      )}
+                      
+                      {currentWorkout.duree_estimee && (
+                        <Badge variant="secondary" className="mt-3">
+                          {currentWorkout.duree_estimee} minutes
+                        </Badge>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Exercices */}
                 {isCircuitWorkout ? (
                   <CircuitTrainingView
                     exercises={exercises}
-                    circuitRounds={session.workout.circuit_rounds || 3}
-                    restTime={session.workout.temps_repos_tours_seconds || 60}
+                    circuitRounds={currentWorkout.circuit_rounds || 3}
+                    restTime={currentWorkout.temps_repos_tours_seconds || 60}
                     sessionId={session.id}
-                    nombreCircuits={session.workout.nombre_circuits || 1}
-                    circuitConfigs={session.workout.circuit_configs || undefined}
+                    nombreCircuits={currentWorkout.nombre_circuits || 1}
+                    circuitConfigs={currentWorkout.circuit_configs || undefined}
                     onRoundComplete={handleRoundComplete}
                     onAllComplete={handleCircuitComplete}
                   />
@@ -625,24 +756,44 @@ const ClientSession = () => {
                         onFeedback={(feedback) => {
                           handleExerciseComplete(workoutExercise.exercise.id);
                         }}
+                        showFeedback={currentWorkout.session_type === 'main' || !currentWorkout.session_type}
                       />
                     ))}
+
+                    {/* Bouton de fin de workout classique */}
+                    {completedExercises.size === exercises.length && exercises.length > 0 && (
+                      <Card className="sticky bottom-4 bg-gradient-to-r from-primary/10 to-primary/5 shadow-xl">
+                        <CardContent className="p-6">
+                          <Button 
+                            onClick={completeCurrentWorkout} 
+                            size="lg" 
+                            className="w-full h-16 text-xl"
+                          >
+                            <CheckCircle className="h-6 w-6 mr-3" />
+                            {currentWorkoutIndex < orderedWorkouts.length - 1 
+                              ? `Terminer "${currentWorkout.titre}" et continuer`
+                              : `Terminer "${currentWorkout.titre}"`
+                            }
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
                   </>
                 )}
               </div>
             )}
-
-            {/* No Exercises */}
-            {exercises.length === 0 && sessionStarted && (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="font-medium mb-2">Aucun exercice programmé</h3>
-                  <p className="text-sm text-muted-foreground">Cette séance ne contient pas encore d'exercices.</p>
-                </CardContent>
-              </Card>
-            )}
           </>
+        )}
+
+        {/* No Exercises */}
+        {exercises.length === 0 && sessionStarted && (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="font-medium mb-2">Aucun exercice programmé</h3>
+              <p className="text-sm text-muted-foreground">Cette séance ne contient pas encore d'exercices.</p>
+            </CardContent>
+          </Card>
         )}
       </div>
     </ClientLayout>

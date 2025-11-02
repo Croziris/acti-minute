@@ -689,6 +689,45 @@ export type Database = {
           },
         ]
       }
+      session_workout: {
+        Row: {
+          created_at: string | null
+          id: string
+          order_index: number
+          session_id: string
+          workout_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          order_index?: number
+          session_id: string
+          workout_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          order_index?: number
+          session_id?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_workout_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_workout_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workout"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       set_log: {
         Row: {
           charge: number | null

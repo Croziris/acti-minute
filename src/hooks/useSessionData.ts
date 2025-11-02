@@ -18,6 +18,7 @@ export interface Session {
     description?: string;
     duree_estimee?: number;
     workout_type?: string;
+    session_type?: 'warmup' | 'main' | 'cooldown';
     circuit_rounds?: number;
     temps_repos_tours_seconds?: number;
     nombre_circuits?: number;
@@ -34,6 +35,7 @@ export interface Session {
       tips?: string;
       variations?: string;
       order_index?: number;
+      circuit_number?: number;
       exercise: {
         id: string;
         libelle: string;
@@ -45,6 +47,44 @@ export interface Session {
       };
     }>;
   };
+  session_workout?: Array<{
+    order_index: number;
+    workout: {
+      id: string;
+      titre: string;
+      description?: string;
+      duree_estimee?: number;
+      workout_type?: string;
+      session_type?: 'warmup' | 'main' | 'cooldown';
+      circuit_rounds?: number;
+      temps_repos_tours_seconds?: number;
+      nombre_circuits?: number;
+      circuit_configs?: Array<{ rounds: number; rest: number }>;
+      workout_exercise: Array<{
+        id: string;
+        exercise_id: string;
+        series?: number;
+        reps?: number;
+        temps_seconds?: number;
+        charge_cible?: number;
+        tempo?: string;
+        couleur?: string;
+        tips?: string;
+        variations?: string;
+        order_index?: number;
+        circuit_number?: number;
+        exercise: {
+          id: string;
+          libelle: string;
+          description?: string;
+          video_id?: string;
+          youtube_url?: string;
+          categories: string[];
+          groupes: string[];
+        };
+      }>;
+    };
+  }>;
 }
 
 export const useSessionData = (sessionId?: string) => {
@@ -58,7 +98,6 @@ export const useSessionData = (sessionId?: string) => {
 
     const fetchSession = async () => {
       try {
-        // First get the session
         const { data: sessionData, error: sessionError } = await supabase
           .from('session')
           .select('*')
@@ -68,8 +107,71 @@ export const useSessionData = (sessionId?: string) => {
 
         if (sessionError) throw sessionError;
 
-        // Then get the workout with exercises if workout_id exists
-        if (sessionData.workout_id) {
+        // Charger les workouts via session_workout (sessions combinées)
+        const { data: sessionWorkouts, error: sessionWorkoutsError } = await supabase
+          .from('session_workout')
+          .select(`
+            order_index,
+            workout:workout_id (
+              id,
+              titre,
+              description,
+              duree_estimee,
+              workout_type,
+              session_type,
+              circuit_rounds,
+              temps_repos_tours_seconds,
+              nombre_circuits,
+              circuit_configs
+            )
+          `)
+          .eq('session_id', sessionId)
+          .order('order_index');
+
+        if (sessionWorkoutsError) throw sessionWorkoutsError;
+
+        // Si on a des workouts via session_workout, charger leurs exercices
+        if (sessionWorkouts && sessionWorkouts.length > 0) {
+          const workoutsWithExercises = await Promise.all(
+            sessionWorkouts.map(async (sw: any) => {
+              const { data: workoutExerciseData, error: workoutExerciseError } = await supabase
+                .from('workout_exercise')
+                .select(`
+                  *,
+                  exercise:exercise_id (
+                    id,
+                    libelle,
+                    description,
+                    video_id,
+                    youtube_url,
+                    categories,
+                    groupes
+                  )
+                `)
+                .eq('workout_id', sw.workout.id)
+                .order('order_index');
+
+              if (workoutExerciseError) throw workoutExerciseError;
+
+              return {
+                order_index: sw.order_index,
+                workout: {
+                  ...sw.workout,
+                  session_type: sw.workout.session_type as 'warmup' | 'main' | 'cooldown' | undefined,
+                  circuit_configs: sw.workout.circuit_configs as Array<{ rounds: number; rest: number }> | undefined,
+                  workout_exercise: workoutExerciseData || []
+                }
+              };
+            })
+          );
+
+          setSession({
+            ...sessionData,
+            statut: sessionData.statut as Session['statut'],
+            session_workout: workoutsWithExercises
+          });
+        } else if (sessionData.workout_id) {
+          // Fallback: ancien système avec workout_id direct
           const { data: workoutData, error: workoutError } = await supabase
             .from('workout')
             .select(`
@@ -78,6 +180,7 @@ export const useSessionData = (sessionId?: string) => {
               description,
               duree_estimee,
               workout_type,
+              session_type,
               circuit_rounds,
               temps_repos_tours_seconds,
               nombre_circuits,
@@ -88,7 +191,6 @@ export const useSessionData = (sessionId?: string) => {
 
           if (workoutError) throw workoutError;
 
-          // Get workout exercises
           const { data: workoutExerciseData, error: workoutExerciseError } = await supabase
             .from('workout_exercise')
             .select(`
@@ -113,6 +215,7 @@ export const useSessionData = (sessionId?: string) => {
             statut: sessionData.statut as Session['statut'],
             workout: {
               ...workoutData,
+              session_type: workoutData.session_type as 'warmup' | 'main' | 'cooldown' | undefined,
               circuit_configs: workoutData.circuit_configs as Array<{ rounds: number; rest: number }> | undefined,
               workout_exercise: workoutExerciseData || []
             }
