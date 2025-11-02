@@ -56,6 +56,47 @@ const ClientSession = () => {
     }
   }, [session]);
 
+  // Restaurer la progression des séances classiques
+  useEffect(() => {
+    async function loadClassicProgress() {
+      if (!session || !session.workout) return;
+      
+      const isCircuitWorkout = session.workout?.workout_type === "circuit";
+      if (isCircuitWorkout || !sessionStarted) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('classic_session_progress')
+          .select('completed_exercises')
+          .eq('session_id', session.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data && data.completed_exercises) {
+          const completedIds = data.completed_exercises as string[];
+          console.log("📂 Progression classique restaurée:", completedIds);
+          
+          setCompletedExercises(new Set(completedIds));
+          
+          const exercises = session.workout?.workout_exercise || [];
+          if (completedIds.length > 0) {
+            toast({
+              title: "🔄 Progression restaurée",
+              description: `${completedIds.length}/${exercises.length} exercice${completedIds.length > 1 ? 's' : ''} déjà effectué${completedIds.length > 1 ? 's' : ''}`,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('❌ Erreur chargement progression classique:', error);
+      }
+    }
+
+    if (session && sessionStarted) {
+      loadClassicProgress();
+    }
+  }, [session?.id, sessionStarted]);
+
   // Détecter automatiquement la fin de séance CLASSIQUE
   useEffect(() => {
     if (!session || !session.workout) return;
@@ -134,11 +175,22 @@ const ClientSession = () => {
 
         if (error) throw error;
         
-        // Supprimer la progression sauvegardée
-        await supabase
-          .from('circuit_progress')
-          .delete()
-          .eq('session_id', session.id);
+        // Supprimer la progression sauvegardée (circuits + classique)
+        const isCircuitWorkout = session.workout?.workout_type === "circuit";
+        
+        if (isCircuitWorkout) {
+          await supabase
+            .from('circuit_progress')
+            .delete()
+            .eq('session_id', session.id);
+          console.log("🗑️ Progression circuit supprimée");
+        } else {
+          await supabase
+            .from('classic_session_progress')
+            .delete()
+            .eq('session_id', session.id);
+          console.log("🗑️ Progression classique supprimée");
+        }
       } else {
         addOfflineData("session_update", {
           sessionId: session.id,
@@ -179,8 +231,42 @@ const ClientSession = () => {
     window.open(whatsappUrl, '_blank');
   };
 
-  const handleExerciseComplete = (exerciseId: string) => {
-    setCompletedExercises((prev) => new Set(prev).add(exerciseId));
+  const handleExerciseComplete = async (exerciseId: string) => {
+    const newCompleted = new Set(completedExercises).add(exerciseId);
+    setCompletedExercises(newCompleted);
+    
+    // Sauvegarder automatiquement pour les séances classiques
+    const isCircuit = session?.workout?.workout_type === "circuit";
+    if (!isCircuit && session) {
+      await saveClassicProgress(Array.from(newCompleted));
+    }
+    
+    console.log(`✅ Exercice ${exerciseId} marqué comme complété`);
+  };
+
+  const saveClassicProgress = async (completedExerciseIds: string[]) => {
+    if (!session) return;
+    
+    const isCircuit = session.workout?.workout_type === "circuit";
+    if (isCircuit) return;
+    
+    try {
+      const { error } = await supabase
+        .from('classic_session_progress')
+        .upsert({
+          session_id: session.id,
+          completed_exercises: completedExerciseIds,
+        }, {
+          onConflict: 'session_id'
+        });
+
+      if (error) throw error;
+      
+      const exercises = session.workout?.workout_exercise || [];
+      console.log(`✅ Progression classique sauvegardée: ${completedExerciseIds.length}/${exercises.length} exercices`);
+    } catch (error) {
+      console.error('❌ Erreur sauvegarde progression classique:', error);
+    }
   };
 
   const handleRoundComplete = async (roundNumber: number) => {

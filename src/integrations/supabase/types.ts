@@ -126,6 +126,35 @@ export type Database = {
           },
         ]
       }
+      classic_session_progress: {
+        Row: {
+          completed_exercises: Json | null
+          id: string
+          session_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          completed_exercises?: Json | null
+          id?: string
+          session_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          completed_exercises?: Json | null
+          id?: string
+          session_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "classic_session_progress_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "session"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_routines: {
         Row: {
           active: boolean | null

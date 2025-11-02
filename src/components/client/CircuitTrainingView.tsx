@@ -86,45 +86,74 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
   useEffect(() => {
     async function loadProgress() {
       try {
+        console.log("📂 Chargement de la progression...");
+        
         const { data, error } = await supabase
           .from('circuit_progress')
           .select('*')
-          .eq('session_id', sessionId);
+          .eq('session_id', sessionId)
+          .order('circuit_number', { ascending: true });
 
         if (error) throw error;
 
         if (data && data.length > 0) {
-          console.log("📂 Progression trouvée:", data);
+          console.log("✅ Progression trouvée:", data);
           
-          // Restaurer les tours complétés
+          // Restaurer les tours complétés PAR CIRCUIT
           const restoredRounds: Record<number, number> = {};
           let restoredExerciseData: Record<string, any> = {};
           
           data.forEach(progress => {
+            console.log(`  → Circuit ${progress.circuit_number}: ${progress.completed_rounds} tours`);
             restoredRounds[progress.circuit_number] = progress.completed_rounds;
-            restoredExerciseData = {
-              ...restoredExerciseData,
-              ...(progress.exercise_data && typeof progress.exercise_data === 'object' ? progress.exercise_data : {})
-            };
+            
+            if (progress.exercise_data && typeof progress.exercise_data === 'object') {
+              restoredExerciseData = {
+                ...restoredExerciseData,
+                ...(progress.exercise_data as Record<string, any>)
+              };
+            }
           });
+          
+          console.log("📊 État restauré:", restoredRounds);
           
           setCompletedRoundsByCircuit(restoredRounds);
           setExerciseData(restoredExerciseData);
           
-          toast({
-            title: "Progression restaurée",
-            description: "Reprise de ta séance là où tu l'avais laissée",
-          });
+          // ✅ Déterminer quel circuit doit être affiché
+          let activeCircuitIndex = 0;
+          for (let i = 1; i <= nombreCircuits; i++) {
+            const config = getCircuitConfig(i);
+            const completed = restoredRounds[i] || 0;
+            
+            console.log(`Circuit ${i}: ${completed}/${config.rounds}`);
+            
+            // Si ce circuit n'est pas terminé, c'est le circuit actif
+            if (completed < config.rounds) {
+              activeCircuitIndex = i - 1; // Index 0-based
+              console.log(`🎯 Circuit actif détecté: ${i}`);
+              break;
+            }
+          }
           
-          console.log("✅ Progression restaurée:", restoredRounds);
+          setCurrentCircuitIndex(activeCircuitIndex);
+          
+          const totalRestored = Object.values(restoredRounds).reduce((sum, rounds) => sum + rounds, 0);
+          
+          toast({
+            title: "🔄 Progression restaurée",
+            description: `Reprise au Circuit ${activeCircuitIndex + 1}, ${totalRestored} tour${totalRestored > 1 ? 's' : ''} effectué${totalRestored > 1 ? 's' : ''}`,
+          });
+        } else {
+          console.log("ℹ️ Aucune progression sauvegardée");
         }
       } catch (error) {
-        console.error('Erreur chargement progression:', error);
+        console.error('❌ Erreur chargement progression:', error);
       }
     }
 
     loadProgress();
-  }, [sessionId]);
+  }, [sessionId, nombreCircuits]);
 
   // Grouper les exercices par circuit
   const exercisesByCircuit = exercises.reduce((acc, exercise) => {
@@ -152,6 +181,8 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
   // Sauvegarder la progression automatiquement
   const saveProgress = async (circuitNumber: number, roundsCompleted: number, currentExerciseData: Record<string, any>) => {
     try {
+      console.log(`💾 Sauvegarde : Circuit ${circuitNumber}, Tours ${roundsCompleted}`);
+      
       const { error } = await supabase
         .from('circuit_progress')
         .upsert({
@@ -159,15 +190,16 @@ export const CircuitTrainingView: React.FC<CircuitTrainingViewProps> = ({
           circuit_number: circuitNumber,
           completed_rounds: roundsCompleted,
           exercise_data: currentExerciseData,
+          updated_at: new Date().toISOString(),
         }, {
           onConflict: 'session_id,circuit_number'
         });
 
       if (error) throw error;
       
-      console.log(`✅ Progression sauvegardée : Circuit ${circuitNumber}, Tour ${roundsCompleted}`);
+      console.log(`✅ Sauvegarde OK : Circuit ${circuitNumber}, ${roundsCompleted} tours`);
     } catch (error) {
-      console.error('Erreur sauvegarde progression:', error);
+      console.error('❌ Erreur sauvegarde progression:', error);
     }
   };
 
