@@ -112,7 +112,7 @@ export const useSessionData = (sessionId?: string) => {
           .from('session_workout')
           .select(`
             order_index,
-            workout:workout_id (
+            workout (
               id,
               titre,
               description,
@@ -131,15 +131,15 @@ export const useSessionData = (sessionId?: string) => {
                 temps_seconds,
                 charge_cible,
                 tempo,
-                couleur,
                 couleur_elastique,
                 tips,
                 variations,
                 order_index,
                 circuit_number,
+                section,
                 rpe_cible,
                 temps_repos_seconds,
-                exercise:exercise_id (
+                exercise (
                   id,
                   libelle,
                   description,
@@ -154,41 +154,40 @@ export const useSessionData = (sessionId?: string) => {
           .eq('session_id', sessionId)
           .order('order_index');
 
+        console.log('📥 Résultat requête session_workout:', sessionWorkouts);
+
         if (sessionWorkoutsError) {
-          console.error('❌ Erreur chargement session_workout:', sessionWorkoutsError);
+          console.error('❌ Erreur:', sessionWorkoutsError);
           throw sessionWorkoutsError;
         }
 
-        // Si session combinée : utiliser session_workout
         if (sessionWorkouts && sessionWorkouts.length > 0) {
-          console.log(`✅ Session combinée détectée: ${sessionWorkouts.length} workout(s)`);
+          console.log(`✅ ${sessionWorkouts.length} workout(s) chargé(s)`);
           
-          // Trier les exercices de chaque workout par order_index
-          const workoutsWithSortedExercises = sessionWorkouts.map((sw: any) => ({
-            order_index: sw.order_index,
-            workout: {
-              ...sw.workout,
-              session_type: sw.workout.session_type as 'warmup' | 'main' | 'cooldown' | undefined,
-              circuit_configs: sw.workout.circuit_configs as Array<{ rounds: number; rest: number }> | undefined,
-              workout_exercise: (sw.workout.workout_exercise || []).sort(
-                (a: any, b: any) => (a.order_index || 0) - (b.order_index || 0)
-              )
-            }
-          }));
-
-          console.log('📦 Données session combinée:', {
-            nb_workouts: workoutsWithSortedExercises.length,
-            workouts: workoutsWithSortedExercises.map(sw => ({
-              titre: sw.workout.titre,
-              nb_exercices: sw.workout.workout_exercise?.length || 0
-            }))
+          // Vérifier que chaque workout a ses exercices
+          sessionWorkouts.forEach((sw, idx) => {
+            console.log(`  Workout ${idx + 1}:`, {
+              id: sw.workout?.id,
+              titre: sw.workout?.titre,
+              nb_exercices: sw.workout?.workout_exercise?.length || 0
+            });
           });
-
+          
           setSession({
             ...sessionData,
             statut: sessionData.statut as Session['statut'],
-            session_workout: workoutsWithSortedExercises
+            session_workout: sessionWorkouts.map((sw: any) => ({
+              order_index: sw.order_index,
+              workout: {
+                ...sw.workout,
+                session_type: sw.workout.session_type as 'warmup' | 'main' | 'cooldown' | undefined,
+                circuit_configs: sw.workout.circuit_configs as Array<{ rounds: number; rest: number }> | undefined
+              }
+            }))
           });
+          
+          setLoading(false);
+          return;
         } else if (sessionData.workout_id) {
           // Fallback: ancien système avec workout_id direct
           console.log('📋 Session simple (legacy) détectée - workout_id:', sessionData.workout_id);
