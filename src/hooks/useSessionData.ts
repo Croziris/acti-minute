@@ -1,5 +1,3 @@
-// REMPLACE TOUT LE CONTENU DE src/hooks/useSessionData.ts PAR :
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,14 +31,11 @@ export interface Session {
       temps_seconds?: number;
       charge_cible?: number;
       tempo?: string;
-      couleur_elastique?: string;
+      couleur?: string;
       tips?: string;
       variations?: string;
       order_index?: number;
       circuit_number?: number;
-      section?: string;
-      rpe_cible?: number;
-      temps_repos_seconds?: number;
       exercise: {
         id: string;
         libelle: string;
@@ -73,14 +68,11 @@ export interface Session {
         temps_seconds?: number;
         charge_cible?: number;
         tempo?: string;
-        couleur_elastique?: string;
+        couleur?: string;
         tips?: string;
         variations?: string;
         order_index?: number;
         circuit_number?: number;
-        section?: string;
-        rpe_cible?: number;
-        temps_repos_seconds?: number;
         exercise: {
           id: string;
           libelle: string;
@@ -106,10 +98,6 @@ export const useSessionData = (sessionId?: string) => {
 
     const fetchSession = async () => {
       try {
-        setLoading(true);
-        setError(null);
-
-        // 1. Charger la session de base
         const { data: sessionData, error: sessionError } = await supabase
           .from('session')
           .select('*')
@@ -119,91 +107,91 @@ export const useSessionData = (sessionId?: string) => {
 
         if (sessionError) throw sessionError;
 
-        console.log('📦 Session chargée:', sessionData);
-
-        // 2. Essayer de charger via session_workout (sessions combinées)
+        // Charger les workouts via session_workout (sessions combinées)
         const { data: sessionWorkouts, error: sessionWorkoutsError } = await supabase
           .from('session_workout')
-          .select('order_index, workout_id')
+          .select(`
+            order_index,
+            workout:workout_id (
+              id,
+              titre,
+              description,
+              duree_estimee,
+              workout_type,
+              session_type,
+              circuit_rounds,
+              temps_repos_tours_seconds,
+              nombre_circuits,
+              circuit_configs,
+              workout_exercise (
+                id,
+                exercise_id,
+                series,
+                reps,
+                temps_seconds,
+                charge_cible,
+                tempo,
+                couleur,
+                couleur_elastique,
+                tips,
+                variations,
+                order_index,
+                circuit_number,
+                rpe_cible,
+                temps_repos_seconds,
+                exercise:exercise_id (
+                  id,
+                  libelle,
+                  description,
+                  video_id,
+                  youtube_url,
+                  categories,
+                  groupes
+                )
+              )
+            )
+          `)
           .eq('session_id', sessionId)
           .order('order_index');
 
         if (sessionWorkoutsError) {
-          console.error('❌ Erreur session_workout:', sessionWorkoutsError);
+          console.error('❌ Erreur chargement session_workout:', sessionWorkoutsError);
+          throw sessionWorkoutsError;
         }
 
-        console.log('📥 session_workout brut:', sessionWorkouts);
-
-        // 3. Si on a des workouts via session_workout, les charger manuellement
+        // Si session combinée : utiliser session_workout
         if (sessionWorkouts && sessionWorkouts.length > 0) {
-          console.log(`✅ Session combinée: ${sessionWorkouts.length} workout(s)`);
+          console.log(`✅ Session combinée détectée: ${sessionWorkouts.length} workout(s)`);
           
-          // Charger chaque workout avec ses exercices
-          const workoutsWithExercises = await Promise.all(
-            sessionWorkouts.map(async (sw) => {
-              // Charger le workout
-              const { data: workout, error: workoutError } = await supabase
-                .from('workout')
-                .select('*')
-                .eq('id', sw.workout_id)
-                .single();
-              
-              if (workoutError) {
-                console.error('❌ Erreur workout:', sw.workout_id, workoutError);
-                return null;
-              }
-              
-              // Charger les exercices du workout
-              const { data: exercises, error: exercisesError } = await supabase
-                .from('workout_exercise')
-                .select(`
-                  *,
-                  exercise:exercise_id (
-                    id,
-                    libelle,
-                    description,
-                    video_id,
-                    youtube_url,
-                    categories,
-                    groupes
-                  )
-                `)
-                .eq('workout_id', sw.workout_id)
-                .order('order_index');
-              
-              if (exercisesError) {
-                console.error('❌ Erreur exercices:', sw.workout_id, exercisesError);
-                return null;
-              }
-              
-              console.log(`  ✓ Workout "${workout.titre}": ${exercises?.length || 0} exercices`);
-              
-              return {
-                order_index: sw.order_index,
-                workout: {
-                  ...workout,
-                  session_type: workout.session_type as 'warmup' | 'main' | 'cooldown' | undefined,
-                  circuit_configs: workout.circuit_configs as Array<{ rounds: number; rest: number }> | undefined,
-                  workout_exercise: exercises || []
-                }
-              };
-            })
-          );
-          
-          const validWorkouts = workoutsWithExercises.filter(w => w !== null);
-          
-          console.log('📊 Workouts chargés:', validWorkouts.length);
-          
+          // Trier les exercices de chaque workout par order_index
+          const workoutsWithSortedExercises = sessionWorkouts.map((sw: any) => ({
+            order_index: sw.order_index,
+            workout: {
+              ...sw.workout,
+              session_type: sw.workout.session_type as 'warmup' | 'main' | 'cooldown' | undefined,
+              circuit_configs: sw.workout.circuit_configs as Array<{ rounds: number; rest: number }> | undefined,
+              workout_exercise: (sw.workout.workout_exercise || []).sort(
+                (a: any, b: any) => (a.order_index || 0) - (b.order_index || 0)
+              )
+            }
+          }));
+
+          console.log('📦 Données session combinée:', {
+            nb_workouts: workoutsWithSortedExercises.length,
+            workouts: workoutsWithSortedExercises.map(sw => ({
+              titre: sw.workout.titre,
+              nb_exercices: sw.workout.workout_exercise?.length || 0
+            }))
+          });
+
           setSession({
             ...sessionData,
             statut: sessionData.statut as Session['statut'],
-            session_workout: validWorkouts
+            session_workout: workoutsWithSortedExercises
           });
-          
         } else if (sessionData.workout_id) {
-          // SESSION SIMPLE (LEGACY)
-          console.log('📋 Session simple - workout_id:', sessionData.workout_id);
-          
+          // Fallback: ancien système avec workout_id direct
+          console.log('📋 Session simple (legacy) détectée - workout_id:', sessionData.workout_id);
           const { data: workoutData, error: workoutError } = await supabase
             .from('workout')
             .select(`
@@ -242,12 +230,7 @@ export const useSessionData = (sessionId?: string) => {
 
           if (workoutExerciseError) throw workoutExerciseError;
 
-          console.log('✅ Session simple chargée:', {
-            workout_titre: workoutData.titre,
-            nb_exercices: workoutExerciseData?.length || 0
-          });
-
-          setSession({
+          const combinedData: Session = {
             ...sessionData,
             statut: sessionData.statut as Session['statut'],
             workout: {
@@ -256,17 +239,21 @@ export const useSessionData = (sessionId?: string) => {
               circuit_configs: workoutData.circuit_configs as Array<{ rounds: number; rest: number }> | undefined,
               workout_exercise: workoutExerciseData || []
             }
+          };
+
+          console.log('✅ Session simple chargée:', {
+            workout_titre: workoutData.titre,
+            nb_exercices: workoutExerciseData?.length || 0
           });
+
+          setSession(combinedData);
         } else {
-          // SESSION VIDE
-          console.warn('⚠️ Session sans workout');
           setSession({
             ...sessionData,
             statut: sessionData.statut as Session['statut']
           });
         }
       } catch (err) {
-        console.error('❌ Erreur fetchSession:', err);
         setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
       } finally {
         setLoading(false);
@@ -276,5 +263,5 @@ export const useSessionData = (sessionId?: string) => {
     fetchSession();
   }, [sessionId, user]);
 
-  return { session, loading, error };
+  return { session, loading, error, refetch: () => setLoading(true) };
 };
