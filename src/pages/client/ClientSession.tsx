@@ -335,9 +335,10 @@ const ClientSession = () => {
     if (!session || !user) return;
 
     // Pour circuit training, on peut logger le tour complété
+    const totalRounds = currentWorkout?.circuit_rounds ?? 3;
     toast({
       title: `Tour ${roundNumber} terminé`,
-      description: `Encore ${session.workout.circuit_rounds! - roundNumber} tour(s) !`,
+      description: `Encore ${totalRounds - roundNumber} tour(s) !`,
     });
   };
 
@@ -472,9 +473,9 @@ const ClientSession = () => {
   }
 
   // Pour les circuits, on compte les tours, pas les exercices
-  const circuitConfigs = session.workout?.circuit_configs as Array<{rounds: number, rest: number}> | undefined;
+  const circuitConfigs = currentWorkout?.circuit_configs as Array<{rounds: number, rest: number}> | undefined;
   const totalRounds = isCircuitWorkout 
-    ? (circuitConfigs || [{ rounds: session.workout.circuit_rounds || 3, rest: 60 }])
+    ? (circuitConfigs || [{ rounds: currentWorkout?.circuit_rounds || 3, rest: 60 }])
         .reduce((sum, config) => sum + config.rounds, 0)
     : 0;
   
@@ -522,9 +523,13 @@ const ClientSession = () => {
                   📊 Résumé de ta séance
                 </h3>
                 <div className="text-sm text-muted-foreground space-y-1">
-                  <p>✅ {session.workout.nombre_circuits || 1} circuit{(session.workout.nombre_circuits || 1) > 1 ? 's' : ''} complété{(session.workout.nombre_circuits || 1) > 1 ? 's' : ''}</p>
-                  <p>✅ {totalRounds} tours effectués</p>
-                  <p>✅ {exercises.length} exercices réalisés</p>
+                  {isCombinedSession && (
+                    <p>✅ {orderedWorkouts.length} séance{orderedWorkouts.length > 1 ? 's' : ''} complétée{orderedWorkouts.length > 1 ? 's' : ''}</p>
+                  )}
+                  {isCircuitWorkout && totalRounds > 0 && (
+                    <p>✅ {totalRounds} tours effectués</p>
+                  )}
+                  <p>✅ {exercises.length} exercice{exercises.length > 1 ? 's' : ''} réalisé{exercises.length > 1 ? 's' : ''}</p>
                 </div>
               </div>
 

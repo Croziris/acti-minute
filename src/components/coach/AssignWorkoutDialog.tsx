@@ -192,11 +192,8 @@ export const AssignWorkoutDialog: React.FC<Props> = ({
 
       if (sessionError) throw sessionError;
 
-      await supabase.from('session_workout').insert({
-        session_id: sessionData.id,
-        workout_id: selectedTemplate,
-        order_index: 0,
-      });
+      // ✅ NE PAS créer d'entrée dans session_workout pour les sessions simples
+      // Cette table est UNIQUEMENT pour les sessions combinées
 
       toast({
         title: "Séance assignée",

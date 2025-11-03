@@ -172,33 +172,9 @@ export const useSessionData = (sessionId?: string) => {
           console.error('❌ Erreur session_workout:', sessionWorkoutsError);
         }
 
-        // 3. Déterminer le type de session et formater les données
-        if (sessionWorkouts && sessionWorkouts.length > 0) {
-          // SESSION COMBINÉE
-          console.log(`✅ Session combinée: ${sessionWorkouts.length} workout(s)`);
-          
-          sessionWorkouts.forEach((sw, idx) => {
-            console.log(`  Workout ${idx + 1}:`, {
-              id: sw.workout?.id,
-              titre: sw.workout?.titre,
-              nb_exercices: sw.workout?.workout_exercise?.length || 0
-            });
-          });
-
-          setSession({
-            ...sessionData,
-            statut: sessionData.statut as Session['statut'],
-            session_workout: sessionWorkouts.map((sw: any) => ({
-              order_index: sw.order_index,
-              workout: {
-                ...sw.workout,
-                session_type: sw.workout.session_type as 'warmup' | 'main' | 'cooldown' | undefined,
-                circuit_configs: sw.workout.circuit_configs as Array<{ rounds: number; rest: number }> | undefined
-              }
-            }))
-          });
-        } else if (sessionData.workout_id) {
-          // SESSION SIMPLE (LEGACY)
+        // 3. ✅ PRIORITÉ À workout_id DIRECT (sessions simples)
+        if (sessionData.workout_id) {
+          // SESSION SIMPLE (priorité absolue)
           console.log('📋 Session simple - workout_id:', sessionData.workout_id);
           
           const { data: workoutData, error: workoutError } = await supabase
@@ -254,6 +230,32 @@ export const useSessionData = (sessionId?: string) => {
               workout_exercise: workoutExerciseData || []
             }
           });
+          
+        } else if (sessionWorkouts && sessionWorkouts.length > 0) {
+          // SESSION COMBINÉE (seulement si workout_id est NULL)
+          console.log(`✅ Session combinée: ${sessionWorkouts.length} workout(s)`);
+          
+          sessionWorkouts.forEach((sw, idx) => {
+            console.log(`  Workout ${idx + 1}:`, {
+              id: sw.workout?.id,
+              titre: sw.workout?.titre,
+              nb_exercices: sw.workout?.workout_exercise?.length || 0
+            });
+          });
+
+          setSession({
+            ...sessionData,
+            statut: sessionData.statut as Session['statut'],
+            session_workout: sessionWorkouts.map((sw: any) => ({
+              order_index: sw.order_index,
+              workout: {
+                ...sw.workout,
+                session_type: sw.workout.session_type as 'warmup' | 'main' | 'cooldown' | undefined,
+                circuit_configs: sw.workout.circuit_configs as Array<{ rounds: number; rest: number }> | undefined
+              }
+            }))
+          });
+          
         } else {
           // SESSION VIDE
           console.warn('⚠️ Session sans workout');
