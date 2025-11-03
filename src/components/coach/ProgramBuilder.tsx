@@ -86,6 +86,15 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
             index_num,
             statut,
             workout_id,
+            workout:workout_id (
+              id,
+              titre,
+              description,
+              duree_estimee,
+              workout_type,
+              circuit_rounds,
+              session_type
+            ),
             session_workout (
               order_index,
               workout (
@@ -135,7 +144,25 @@ export const ProgramBuilder: React.FC<Props> = ({ programId, clientId }) => {
               };
             }
             
-            // Cas 2 : Session simple (pas de workouts via session_workout)
+            // Cas 2 : Session simple (workout via workout_id)
+            if (s.workout_id && s.workout) {
+              console.log('✅ Session simple détectée:', s.id, s.workout.titre);
+              return {
+                id: s.id,
+                index_num: s.index_num,
+                statut: s.statut,
+                isCombined: false,
+                workout: {
+                  titre: s.workout.titre,
+                  description: s.workout.description,
+                  duree_estimee: s.workout.duree_estimee,
+                  workout_type: s.workout.workout_type || 'classic',
+                  circuit_rounds: s.workout.circuit_rounds
+                }
+              };
+            }
+            
+            console.warn('⚠️ Session ignorée (ni simple ni combinée):', s.id);
             return null;
           })
           .filter((s: any) => s !== null)
